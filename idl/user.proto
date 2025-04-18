@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "novelai/user";
+
+// 导入必要的包
+import "google/protobuf/empty.proto";
+
+// 用户信息结构
+message User {
+    int64 id = 1;                    // 用户ID
+    string username = 2;             // 用户名
+    string nickname = 3;             // 昵称
+    string avatar = 4;               // 头像URL
+    string email = 5;                // 电子邮箱
+    int32 status = 6;                // 用户状态：0-正常，1-禁用
+    int64 created_at = 7;            // 创建时间（Unix时间戳）
+    int64 updated_at = 8;            // 更新时间（Unix时间戳）
+}
+
+// 注册请求
+message RegisterRequest {
+    string username = 1;             // 用户名
+    string password = 2;             // 密码
+    string nickname = 3;             // 昵称
+    string email = 4;                // 电子邮箱
+}
+
+// 注册响应
+message RegisterResponse {
+    int32 code = 1;                  // 状态码：0-成功，非0-失败
+    string message = 2;              // 响应消息
+    int64 user_id = 3;               // 用户ID
+    string token = 4;                // 用户认证令牌
+}
+
+// 登录请求
+message LoginRequest {
+    string username = 1;             // 用户名
+    string password = 2;             // 密码
+}
+
+// 登录响应
+message LoginResponse {
+    int32 code = 1;                  // 状态码：0-成功，非0-失败
+    string message = 2;              // 响应消息
+    int64 user_id = 3;               // 用户ID
+    string token = 4;                // 用户认证令牌
+}
+
+// 获取用户信息请求
+message GetUserRequest {
+    int64 user_id = 1;               // 用户ID
+    string token = 2;                // 用户认证令牌
+}
+
+// 获取用户信息响应
+message GetUserResponse {
+    int32 code = 1;                  // 状态码：0-成功，非0-失败
+    string message = 2;              // 响应消息
+    User user = 3;                   // 用户信息
+}
+
+// 更新用户信息请求
+message UpdateUserRequest {
+    int64 user_id = 1;               // 用户ID
+    string token = 2;                // 用户认证令牌
+    string nickname = 3;             // 昵称
+    string avatar = 4;               // 头像URL
+    string email = 5;                // 电子邮箱
+}
+
+// 更新用户信息响应
+message UpdateUserResponse {
+    int32 code = 1;                  // 状态码：0-成功，非0-失败
+    string message = 2;              // 响应消息
+}
+
+// 用户服务
+service UserService {
+    // 用户注册
+    rpc Register(RegisterRequest) returns (RegisterResponse) {}
+    
+    // 用户登录
+    rpc Login(LoginRequest) returns (LoginResponse) {}
+    
+    // 获取用户信息
+    rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+    
+    // 更新用户信息
+    rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {}
+}
