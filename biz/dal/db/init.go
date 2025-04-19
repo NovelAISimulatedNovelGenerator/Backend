@@ -1,0 +1,77 @@
+/*
+ * NovelAI Project
+ * Copyright (C) 2023-2025
+ */
+
+package db
+
+import (
+	"gorm.io/gorm"
+	gormopentracing "gorm.io/plugin/opentracing"
+	"log"
+)
+
+// DB 全局数据库连接实例
+var DB *gorm.DB
+
+// Config 数据库配置
+type Config struct {
+	DriverName string // 数据库驱动名称
+	DSN        string // 数据源连接字符串
+	Active     int    // 活跃连接数 
+	Idle       int    // 空闲连接数
+}
+
+// Init 初始化数据库连接
+// 该函数通过配置参数初始化数据库连接，支持不同数据库驱动
+// 当前未选择具体数据库，保留驱动选择的灵活性
+func Init(config *Config) {
+	var err error
+	var dialector gorm.Dialector
+
+	// 根据驱动类型初始化对应的数据库连接
+	// 支持未来扩展不同数据库类型
+	switch config.DriverName {
+	// 可添加 MySQL、PostgreSQL、SQLite 等驱动支持
+	// case "mysql":
+	//     dialector = mysql.Open(config.DSN)
+	// case "postgres":
+	//     dialector = postgres.Open(config.DSN)
+	// case "sqlite":
+	//     dialector = sqlite.Open(config.DSN)
+	default:
+		log.Printf("未指定数据库驱动类型，数据库连接将延迟初始化")
+		return
+	}
+
+	// 初始化 GORM 数据库连接
+	DB, err = gorm.Open(dialector, &gorm.Config{
+		PrepareStmt:            true, // 开启预编译语句缓存
+		SkipDefaultTransaction: true, // 跳过默认事务提高性能
+	})
+	if err != nil {
+		panic("数据库连接失败: " + err.Error())
+	}
+
+	// 添加 OpenTracing 插件支持，用于分布式追踪
+	if err = DB.Use(gormopentracing.New()); err != nil {
+		panic("OpenTracing 插件初始化失败: " + err.Error())
+	}
+
+	// 设置连接池参数
+	sqlDB, err := DB.DB()
+	if err != nil {
+		panic("获取底层数据库连接失败: " + err.Error())
+	}
+
+	// 设置最大连接数
+	if config.Active > 0 {
+		sqlDB.SetMaxOpenConns(config.Active)
+	}
+	// 设置最大空闲连接数
+	if config.Idle > 0 {
+		sqlDB.SetMaxIdleConns(config.Idle)
+	}
+
+	log.Printf("数据库连接初始化成功")
+}
