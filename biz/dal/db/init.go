@@ -6,9 +6,13 @@
 package db
 
 import (
-	"gorm.io/gorm"
-	gormopentracing "gorm.io/plugin/opentracing"
 	"log"
+	"time"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+	gormopentracing "gorm.io/plugin/opentracing"
 )
 
 // DB 全局数据库连接实例
@@ -32,22 +36,34 @@ func Init(config *Config) {
 	// 根据驱动类型初始化对应的数据库连接
 	// 支持未来扩展不同数据库类型
 	switch config.DriverName {
-	// 可添加 MySQL、PostgreSQL、SQLite 等驱动支持
+	case "postgres":
+		dialector = postgres.Open(config.DSN)
+	// 可添加 MySQL、SQLite 等其他驱动支持
 	// case "mysql":
 	//     dialector = mysql.Open(config.DSN)
-	// case "postgres":
-	//     dialector = postgres.Open(config.DSN)
 	// case "sqlite":
 	//     dialector = sqlite.Open(config.DSN)
 	default:
-		log.Printf("未指定数据库驱动类型，数据库连接将延迟初始化")
+		log.Printf("未指定或不支持的数据库驱动类型: %s", config.DriverName)
 		return
 	}
 
+	// 配置自定义日志记录器
+	newLogger := logger.New(
+		log.New(log.Writer(), "\r\n[DB] ", log.LstdFlags), // io writer
+		logger.Config{
+			SlowThreshold:             time.Second,   // 慢查询阈值
+			LogLevel:                  logger.Info,   // 日志级别
+			IgnoreRecordNotFoundError: true,          // 忽略记录未找到错误
+			Colorful:                  true,          // 启用彩色打印
+		},
+	)
+
 	// 初始化 GORM 数据库连接
 	DB, err = gorm.Open(dialector, &gorm.Config{
-		PrepareStmt:            true, // 开启预编译语句缓存
-		SkipDefaultTransaction: true, // 跳过默认事务提高性能
+		Logger:                  newLogger,      // 使用自定义日志记录器
+		PrepareStmt:            true,           // 开启预编译语句缓存
+		SkipDefaultTransaction: true,           // 跳过默认事务提高性能
 	})
 	if err != nil {
 		panic("数据库连接失败: " + err.Error())
