@@ -10,7 +10,7 @@ import (
 	"encoding/hex"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	"novelai/pkg/constants"
 	
 	"novelai/biz/model/user"
 	"novelai/biz/dal/db"
@@ -37,7 +37,7 @@ func Register(ctx context.Context, c *app.RequestContext) {
 	// 获取请求参数
 	req := new(user.RegisterRequest)
 	if err := c.BindAndValidate(req); err != nil {
-		c.JSON(consts.StatusBadRequest, &user.RegisterResponse{
+		c.JSON(constants.StatusBadRequest, &user.RegisterResponse{
 			Code:    400,
 			Message: err.Error(),
 		})
@@ -46,7 +46,7 @@ func Register(ctx context.Context, c *app.RequestContext) {
 
 	// 校验参数
 	if req.Username == "" || req.Password == "" {
-		c.JSON(consts.StatusBadRequest, &user.RegisterResponse{
+		c.JSON(constants.StatusBadRequest, &user.RegisterResponse{
 			Code:    400,
 			Message: "用户名和密码不能为空",
 		})
@@ -66,13 +66,13 @@ func Register(ctx context.Context, c *app.RequestContext) {
 	userID, err := db.CreateUser(newUser)
 	if err != nil {
 		if err == db.ErrUserAlreadyExists {
-			c.JSON(consts.StatusOK, &user.RegisterResponse{
+			c.JSON(constants.StatusOK, &user.RegisterResponse{
 				Code:    1001,
 				Message: "用户名已存在",
 			})
 			return
 		}
-		c.JSON(consts.StatusInternalServerError, &user.RegisterResponse{
+		c.JSON(constants.StatusInternalServerError, &user.RegisterResponse{
 			Code:    500,
 			Message: "注册失败：" + err.Error(),
 		})
@@ -83,7 +83,7 @@ func Register(ctx context.Context, c *app.RequestContext) {
 	token := generateToken(userID, req.Username)
 	
 	// 返回成功响应
-	c.JSON(consts.StatusOK, &user.RegisterResponse{
+	c.JSON(constants.StatusOK, &user.RegisterResponse{
 		Code:    0,
 		Message: "注册成功",
 		UserId:  userID,
@@ -96,7 +96,7 @@ func Login(ctx context.Context, c *app.RequestContext) {
 	// 获取请求参数
 	req := new(user.LoginRequest)
 	if err := c.BindAndValidate(req); err != nil {
-		c.JSON(consts.StatusBadRequest, &user.LoginResponse{
+		c.JSON(constants.StatusBadRequest, &user.LoginResponse{
 			Code:    400,
 			Message: err.Error(),
 		})
@@ -105,7 +105,7 @@ func Login(ctx context.Context, c *app.RequestContext) {
 
 	// 校验参数
 	if req.Username == "" || req.Password == "" {
-		c.JSON(consts.StatusBadRequest, &user.LoginResponse{
+		c.JSON(constants.StatusBadRequest, &user.LoginResponse{
 			Code:    400,
 			Message: "用户名和密码不能为空",
 		})
@@ -117,13 +117,13 @@ func Login(ctx context.Context, c *app.RequestContext) {
 	userID, err := db.VerifyUser(req.Username, hashPassword)
 	if err != nil {
 		if err == db.ErrInvalidPassword || err == db.ErrUserNotFound {
-			c.JSON(consts.StatusOK, &user.LoginResponse{
+			c.JSON(constants.StatusOK, &user.LoginResponse{
 				Code:    1002,
 				Message: "用户名或密码错误",
 			})
 			return
 		}
-		c.JSON(consts.StatusInternalServerError, &user.LoginResponse{
+		c.JSON(constants.StatusInternalServerError, &user.LoginResponse{
 			Code:    500,
 			Message: "登录失败：" + err.Error(),
 		})
@@ -133,7 +133,7 @@ func Login(ctx context.Context, c *app.RequestContext) {
 	// 验证用户存在性（无需使用返回的userInfo）
 	_, err = db.QueryUserByID(userID)
 	if err != nil {
-		c.JSON(consts.StatusInternalServerError, &user.LoginResponse{
+		c.JSON(constants.StatusInternalServerError, &user.LoginResponse{
 			Code:    500,
 			Message: "获取用户信息失败",
 		})
@@ -144,7 +144,7 @@ func Login(ctx context.Context, c *app.RequestContext) {
 	token := generateToken(userID, req.Username)
 	
 	// 返回成功响应
-	c.JSON(consts.StatusOK, &user.LoginResponse{
+	c.JSON(constants.StatusOK, &user.LoginResponse{
 		Code:    0,
 		Message: "登录成功",
 		UserId:  userID,
@@ -157,7 +157,7 @@ func GetUser(ctx context.Context, c *app.RequestContext) {
 	// 获取请求参数
 	req := new(user.GetUserRequest)
 	if err := c.BindAndValidate(req); err != nil {
-		c.JSON(consts.StatusBadRequest, &user.GetUserResponse{
+		c.JSON(constants.StatusBadRequest, &user.GetUserResponse{
 			Code:    400,
 			Message: err.Error(),
 		})
@@ -166,7 +166,7 @@ func GetUser(ctx context.Context, c *app.RequestContext) {
 
 	// 验证用户ID
 	if req.UserId <= 0 {
-		c.JSON(consts.StatusBadRequest, &user.GetUserResponse{
+		c.JSON(constants.StatusBadRequest, &user.GetUserResponse{
 			Code:    400,
 			Message: "无效的用户ID",
 		})
@@ -177,13 +177,13 @@ func GetUser(ctx context.Context, c *app.RequestContext) {
 	userInfo, err := db.QueryUserByID(req.UserId)
 	if err != nil {
 		if err == db.ErrUserNotFound {
-			c.JSON(consts.StatusOK, &user.GetUserResponse{
+			c.JSON(constants.StatusOK, &user.GetUserResponse{
 				Code:    1003,
 				Message: "用户不存在",
 			})
 			return
 		}
-		c.JSON(consts.StatusInternalServerError, &user.GetUserResponse{
+		c.JSON(constants.StatusInternalServerError, &user.GetUserResponse{
 			Code:    500,
 			Message: "获取用户信息失败：" + err.Error(),
 		})
@@ -203,7 +203,7 @@ func GetUser(ctx context.Context, c *app.RequestContext) {
 	}
 	
 	// 返回成功响应
-	c.JSON(consts.StatusOK, &user.GetUserResponse{
+	c.JSON(constants.StatusOK, &user.GetUserResponse{
 		Code:    0,
 		Message: "获取成功",
 		User:    userResp,
@@ -215,7 +215,7 @@ func UpdateUser(ctx context.Context, c *app.RequestContext) {
 	// 获取请求参数
 	req := new(user.UpdateUserRequest)
 	if err := c.BindAndValidate(req); err != nil {
-		c.JSON(consts.StatusBadRequest, &user.UpdateUserResponse{
+		c.JSON(constants.StatusBadRequest, &user.UpdateUserResponse{
 			Code:    400,
 			Message: err.Error(),
 		})
@@ -224,7 +224,7 @@ func UpdateUser(ctx context.Context, c *app.RequestContext) {
 
 	// 验证用户ID
 	if req.UserId <= 0 {
-		c.JSON(consts.StatusBadRequest, &user.UpdateUserResponse{
+		c.JSON(constants.StatusBadRequest, &user.UpdateUserResponse{
 			Code:    400,
 			Message: "无效的用户ID",
 		})
@@ -234,7 +234,7 @@ func UpdateUser(ctx context.Context, c *app.RequestContext) {
 	// 首先检查用户是否存在
 	exists, err := db.CheckUserExists(req.UserId)
 	if err != nil {
-		c.JSON(consts.StatusInternalServerError, &user.UpdateUserResponse{
+		c.JSON(constants.StatusInternalServerError, &user.UpdateUserResponse{
 			Code:    500,
 			Message: "验证用户失败：" + err.Error(),
 		})
@@ -242,7 +242,7 @@ func UpdateUser(ctx context.Context, c *app.RequestContext) {
 	}
 
 	if !exists {
-		c.JSON(consts.StatusOK, &user.UpdateUserResponse{
+		c.JSON(constants.StatusOK, &user.UpdateUserResponse{
 			Code:    1003,
 			Message: "用户不存在",
 		})
@@ -260,7 +260,7 @@ func UpdateUser(ctx context.Context, c *app.RequestContext) {
 	// 更新用户信息
 	err = db.UpdateUserProfile(updateUser)
 	if err != nil {
-		c.JSON(consts.StatusInternalServerError, &user.UpdateUserResponse{
+		c.JSON(constants.StatusInternalServerError, &user.UpdateUserResponse{
 			Code:    500,
 			Message: "更新用户信息失败：" + err.Error(),
 		})
@@ -268,7 +268,7 @@ func UpdateUser(ctx context.Context, c *app.RequestContext) {
 	}
 	
 	// 返回成功响应
-	c.JSON(consts.StatusOK, &user.UpdateUserResponse{
+	c.JSON(constants.StatusOK, &user.UpdateUserResponse{
 		Code:    0,
 		Message: "更新成功",
 	})

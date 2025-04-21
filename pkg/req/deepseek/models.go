@@ -1,32 +1,10 @@
 // Package deepseek 提供了与DeepSeek API交互的功能，基于OpenAI官方SDK
 package deepseek
 
-// DeepSeek模型常量
-const (
-	// DeepSeekChat 是DeepSeek的通用聊天模型
-	DeepSeekChat = "deepseek-chat"
-	
-	// DeepSeekCoder 是DeepSeek的代码生成模型
-	DeepSeekCoder = "deepseek-coder"
-	
-	// DeepSeekMax 是DeepSeek的大参数模型
-	DeepSeekMax = "deepseek-llm-67b-max"
-	
-	// DeepSeek7B 是DeepSeek的7B参数模型
-	DeepSeek7B = "deepseek-llm-7b-base"
-)
+import "novelai/pkg/constants"
 
-// 角色常量，与OpenAI保持兼容
-const (
-	// RoleSystem 是系统角色
-	RoleSystem = "system"
-	
-	// RoleUser 是用户角色
-	RoleUser = "user"
-	
-	// RoleAssistant 是助手角色
-	RoleAssistant = "assistant"
-)
+// DeepSeek相关常量全部迁移至pkg/constants/deepseek.go，统一维护
+// 使用方式如 constants.DeepSeekChat, constants.constants.RoleSystem 等
 
 // Message 表示一个聊天消息
 type Message struct {
@@ -106,7 +84,7 @@ func NewMessageBuilder() *MessageBuilder {
 // AddSystemMessage 添加一个系统消息
 func (b *MessageBuilder) AddSystemMessage(content string) *MessageBuilder {
 	b.messages = append(b.messages, Message{
-		Role:    RoleSystem,
+		Role:    constants.RoleSystem,
 		Content: content,
 	})
 	return b
@@ -115,7 +93,7 @@ func (b *MessageBuilder) AddSystemMessage(content string) *MessageBuilder {
 // AddUserMessage 添加一个用户消息
 func (b *MessageBuilder) AddUserMessage(content string) *MessageBuilder {
 	b.messages = append(b.messages, Message{
-		Role:    RoleUser,
+		Role:    constants.RoleUser,
 		Content: content,
 	})
 	return b
@@ -124,7 +102,7 @@ func (b *MessageBuilder) AddUserMessage(content string) *MessageBuilder {
 // AddAssistantMessage 添加一个助手消息
 func (b *MessageBuilder) AddAssistantMessage(content string) *MessageBuilder {
 	b.messages = append(b.messages, Message{
-		Role:    RoleAssistant,
+		Role:    constants.RoleAssistant,
 		Content: content,
 	})
 	return b

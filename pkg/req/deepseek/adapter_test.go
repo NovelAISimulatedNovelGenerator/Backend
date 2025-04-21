@@ -1,6 +1,8 @@
 // Package deepseek 提供了与DeepSeek API交互的功能，基于OpenAI官方SDK
 package deepseek
 
+import "novelai/pkg/constants"
+
 import (
 	"context"
 	"net/http"
@@ -57,7 +59,7 @@ func TestAdapter_GenerateText(t *testing.T) {
 	
 	// 发送文本生成请求
 	ctx := context.Background()
-	result, err := adapter.GenerateText(ctx, DeepSeekChat, "这是一个测试", 100)
+	result, err := adapter.GenerateText(ctx, constants.DeepSeekChat, "这是一个测试", 100)
 	if err != nil {
 		t.Fatalf("生成文本失败: %v", err)
 	}
@@ -121,7 +123,7 @@ func TestAdapter_ChatWithSystem(t *testing.T) {
 	
 	// 发送聊天请求
 	ctx := context.Background()
-	result, err := adapter.ChatWithSystem(ctx, DeepSeekChat, "你是一个测试助手", "这是一个测试消息", 100)
+	result, err := adapter.ChatWithSystem(ctx, constants.DeepSeekChat, "你是一个测试助手", "这是一个测试消息", 100)
 	if err != nil {
 		t.Fatalf("聊天请求失败: %v", err)
 	}
@@ -185,13 +187,13 @@ func TestAdapter_ChatWithMessages(t *testing.T) {
 	
 	// 创建消息列表
 	messages := []Message{
-		{Role: RoleSystem, Content: "你是一个测试助手"},
-		{Role: RoleUser, Content: "这是一个测试消息"},
+		{Role: constants.RoleSystem, Content: "你是一个测试助手"},
+		{Role: constants.RoleUser, Content: "这是一个测试消息"},
 	}
 	
 	// 发送聊天请求
 	ctx := context.Background()
-	result, err := adapter.ChatWithMessages(ctx, DeepSeekChat, messages, 100)
+	result, err := adapter.ChatWithMessages(ctx, constants.DeepSeekChat, messages, 100)
 	if err != nil {
 		t.Fatalf("聊天请求失败: %v", err)
 	}
@@ -273,7 +275,7 @@ func TestAdapter_ErrorHandling(t *testing.T) {
 	
 	// 发送请求并期望错误
 	ctx := context.Background()
-	_, err = adapter.GenerateText(ctx, DeepSeekChat, "这是一个错误测试", 100)
+	_, err = adapter.GenerateText(ctx, constants.DeepSeekChat, "这是一个错误测试", 100)
 	
 	// 验证错误存在
 	if err == nil {

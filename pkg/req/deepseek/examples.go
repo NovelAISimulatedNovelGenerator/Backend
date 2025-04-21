@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"novelai/pkg/constants"
 	"os"
 	"os/signal"
 	"syscall"
@@ -22,7 +23,7 @@ func ExampleCompletion() {
 
 	// 创建请求
 	req := &CompletionRequest{
-		Model:       DeepSeekChat,
+		Model:       constants.DeepSeekChat,
 		Prompt:      "给我讲一个关于人工智能的故事",
 		MaxTokens:   500,
 		Temperature: 0.7,
@@ -67,7 +68,7 @@ func ExampleChatCompletion() {
 
 	// 创建请求
 	req := &ChatRequest{
-		Model:       DeepSeekChat,
+		Model:       constants.DeepSeekChat,
 		Messages:    msgBuilder.Messages(),
 		MaxTokens:   500,
 		Temperature: 0.7,
@@ -114,7 +115,7 @@ func ExampleCompletionStream() {
 
 	// 创建请求
 	req := &ChatRequest{
-		Model:       DeepSeekChat,
+		Model:       constants.DeepSeekChat,
 		Messages:    msgBuilder.Messages(),
 		MaxTokens:   500,
 		Temperature: 0.7,
@@ -197,7 +198,7 @@ func ExampleChatCompletionStream() {
 
 	// 创建请求
 	req := &ChatRequest{
-		Model:       DeepSeekChat,
+		Model:       constants.DeepSeekChat,
 		Messages:    msgBuilder.Messages(),
 		MaxTokens:   500,
 		Temperature: 0.7,
@@ -275,7 +276,7 @@ func ExampleAdapter() {
 
 	// 简单的文本生成
 	ctx := context.Background()
-	result, err := adapter.GenerateText(ctx, DeepSeekChat, "讲一个有趣的故事", 500)
+	result, err := adapter.GenerateText(ctx, constants.DeepSeekChat, "讲一个有趣的故事", 500)
 	if err != nil {
 		fmt.Printf("错误: %v\n", err)
 		return
@@ -286,7 +287,7 @@ func ExampleAdapter() {
 	// 简单的聊天
 	systemPrompt := "你是一个友好的助手。"
 	userPrompt := "请介绍一下自己。"
-	chatResult, err := adapter.ChatWithSystem(ctx, DeepSeekChat, systemPrompt, userPrompt, 300)
+	chatResult, err := adapter.ChatWithSystem(ctx, constants.DeepSeekChat, systemPrompt, userPrompt, 300)
 	if err != nil {
 		fmt.Printf("错误: %v\n", err)
 		return
@@ -296,10 +297,10 @@ func ExampleAdapter() {
 
 	// 使用消息列表发送聊天请求
 	messages := []Message{
-		{Role: RoleSystem, Content: "你是DeepSeek AI的文档助手。"},
-		{Role: RoleUser, Content: "什么是DeepSeek?"},
+		{Role: constants.RoleSystem, Content: "你是DeepSeek AI的文档助手。"},
+		{Role: constants.RoleUser, Content: "什么是DeepSeek?"},
 	}
-	messagesResult, err := adapter.ChatWithMessages(ctx, DeepSeekChat, messages, 300)
+	messagesResult, err := adapter.ChatWithMessages(ctx, constants.DeepSeekChat, messages, 300)
 	if err != nil {
 		fmt.Printf("错误: %v\n", err)
 		return
@@ -333,7 +334,7 @@ func ExampleAdapterStream() {
 		defer close(done)
 
 		// 发送流式聊天请求
-		result, err := adapter.ChatWithSystemStream(ctx, DeepSeekChat,
+		result, err := adapter.ChatWithSystemStream(ctx, constants.DeepSeekChat,
 			"你是一个创意写作助手。",
 			"请用200字创作一个关于宇宙探索的短文。",
 			500)

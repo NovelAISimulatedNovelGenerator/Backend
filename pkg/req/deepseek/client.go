@@ -79,8 +79,8 @@ func (c *Client) Completion(ctx context.Context, request *CompletionRequest) (ma
 	// 确保不是流式请求
 	request.Stream = false
 	
-	// 发送请求
-	url := fmt.Sprintf("%s/completions", c.config.BaseURL)
+	// 拼接 beta 路径，保证 completions 只用 beta
+	url := fmt.Sprintf("%s/beta/completions", strings.TrimRight(c.config.BaseURL, "/"))
 	response, err := c.sendJSONRequest(ctx, http.MethodPost, url, request)
 	if err != nil {
 		return nil, fmt.Errorf("文本生成请求失败: %w", err)
@@ -94,8 +94,8 @@ func (c *Client) ChatCompletion(ctx context.Context, request *ChatRequest) (map[
 	// 确保不是流式请求
 	request.Stream = false
 	
-	// 发送请求
-	url := fmt.Sprintf("%s/chat/completions", c.config.BaseURL)
+	// 拼接 v1 路径，chat 只用 v1
+	url := fmt.Sprintf("%s/v1/chat/completions", strings.TrimRight(c.config.BaseURL, "/"))
 	response, err := c.sendJSONRequest(ctx, http.MethodPost, url, request)
 	if err != nil {
 		return nil, fmt.Errorf("聊天请求失败: %w", err)
@@ -109,8 +109,8 @@ func (c *Client) CompletionStream(ctx context.Context, request *CompletionReques
 	// 确保是流式请求
 	request.Stream = true
 	
-	// 发送请求
-	url := fmt.Sprintf("%s/completions", c.config.BaseURL)
+	// 拼接 beta 路径，保证 completions stream 只用 beta
+	url := fmt.Sprintf("%s/beta/completions", strings.TrimRight(c.config.BaseURL, "/"))
 	resp, err := c.sendStreamRequest(ctx, url, request)
 	if err != nil {
 		return nil, fmt.Errorf("流式文本生成请求失败: %w", err)
@@ -124,8 +124,8 @@ func (c *Client) ChatCompletionStream(ctx context.Context, request *ChatRequest)
 	// 确保是流式请求
 	request.Stream = true
 	
-	// 发送请求
-	url := fmt.Sprintf("%s/chat/completions", c.config.BaseURL)
+	// 拼接 v1 路径，chat stream 只用 v1
+	url := fmt.Sprintf("%s/v1/chat/completions", strings.TrimRight(c.config.BaseURL, "/"))
 	resp, err := c.sendStreamRequest(ctx, url, request)
 	if err != nil {
 		return nil, fmt.Errorf("流式聊天请求失败: %w", err)

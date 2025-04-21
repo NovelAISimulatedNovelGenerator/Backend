@@ -1,6 +1,8 @@
 // Package deepseek 提供了与DeepSeek API交互的功能，基于OpenAI官方SDK
 package deepseek
 
+import "novelai/pkg/constants"
+
 import (
 	"context"
 	"net/http"
@@ -159,7 +161,7 @@ func TestCompletionRequest(t *testing.T) {
 	
 	// 发送文本生成请求
 	req := &CompletionRequest{
-		Model:     DeepSeekChat,
+		Model:     constants.DeepSeekChat,
 		Prompt:    "这是一个测试",
 		MaxTokens: 100,
 	}
@@ -246,7 +248,7 @@ func TestChatRequest(t *testing.T) {
 	
 	// 发送聊天请求
 	req := &ChatRequest{
-		Model:     DeepSeekChat,
+		Model:     constants.DeepSeekChat,
 		Messages:  msgBuilder.Messages(),
 		MaxTokens: 100,
 	}
@@ -302,27 +304,27 @@ func TestMessageBuilder(t *testing.T) {
 	}
 	
 	// 验证消息内容
-	if messages[0].Role != RoleSystem || messages[0].Content != "系统消息" {
+	if messages[0].Role != constants.RoleSystem || messages[0].Content != "系统消息" {
 		t.Errorf("系统消息不匹配，期望为{%s, %s}，实际为{%s, %s}", 
-			RoleSystem, "系统消息", messages[0].Role, messages[0].Content)
+			constants.RoleSystem, "系统消息", messages[0].Role, messages[0].Content)
 	}
 	
-	if messages[1].Role != RoleUser || messages[1].Content != "用户消息" {
+	if messages[1].Role != constants.RoleUser || messages[1].Content != "用户消息" {
 		t.Errorf("用户消息不匹配，期望为{%s, %s}，实际为{%s, %s}", 
-			RoleUser, "用户消息", messages[1].Role, messages[1].Content)
+			constants.RoleUser, "用户消息", messages[1].Role, messages[1].Content)
 	}
 	
-	if messages[2].Role != RoleAssistant || messages[2].Content != "助手消息" {
+	if messages[2].Role != constants.RoleAssistant || messages[2].Content != "助手消息" {
 		t.Errorf("助手消息不匹配，期望为{%s, %s}，实际为{%s, %s}", 
-			RoleAssistant, "助手消息", messages[2].Role, messages[2].Content)
+			constants.RoleAssistant, "助手消息", messages[2].Role, messages[2].Content)
 	}
 	
 	// 测试创建聊天请求
-	req := msgBuilder.CreateChatRequest(DeepSeekChat, 100)
+	req := msgBuilder.CreateChatRequest(constants.DeepSeekChat, 100)
 	
 	// 验证请求属性
-	if req.Model != DeepSeekChat {
-		t.Errorf("期望Model为'%s'，实际为'%s'", DeepSeekChat, req.Model)
+	if req.Model != constants.DeepSeekChat {
+		t.Errorf("期望Model为'%s'，实际为'%s'", constants.DeepSeekChat, req.Model)
 	}
 	
 	if req.MaxTokens != 100 {

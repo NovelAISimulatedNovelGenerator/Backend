@@ -1,5 +1,6 @@
-// Package deepseek 提供了与DeepSeek API交互的功能，基于OpenAI官方SDK
+// Package deepseek 提供了与constants.DeepSeekChat API交互的功能，基于OpenAI官方SDK
 package deepseek
+
 
 import (
 	"bytes"
