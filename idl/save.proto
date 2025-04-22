@@ -1,0 +1,119 @@
+syntax = "proto3";
+
+package save;
+
+option go_package = "novelai/save";
+
+// 导入必要的包
+import "google/protobuf/empty.proto";
+
+// Save 保存模型
+// 表示用户的保存项，包含保存内容、类型、状态等信息
+message Save {
+  int64 id = 1;                     // 保存项ID
+  int64 user_id = 2;                 // 用户ID
+  string save_id = 3;                // 保存项唯一标识符
+  string save_name = 4;              // 保存项名称
+  string save_description = 5;       // 保存项描述
+  string save_data = 6;              // 保存的具体内容（如JSON字符串）
+  string save_type = 7;              // 保存类型（如草稿、配置等）
+  string save_status = 8;            // 保存状态（如active、deleted等）
+  int64 created_at = 9;              // 创建时间（unix时间戳）
+  int64 updated_at = 10;             // 更新时间（unix时间戳）
+}
+
+// 创建保存请求
+message CreateSaveRequest {
+  int64 user_id = 1;                 // 用户ID
+  string token = 2;                  // 用户认证令牌
+  string save_name = 3;              // 保存项名称
+  string save_description = 4;       // 保存项描述
+  string save_data = 5;              // 保存的具体内容
+  string save_type = 6;              // 保存类型
+}
+
+// 创建保存响应
+message CreateSaveResponse {
+  int32 code = 1;                    // 状态码：0-成功，非0-失败
+  string message = 2;                // 响应消息
+  string save_id = 3;                // 保存项ID
+}
+
+// 获取保存请求
+message GetSaveRequest {
+  int64 user_id = 1;                 // 用户ID
+  string token = 2;                  // 用户认证令牌
+  string save_id = 3;                // 保存项ID
+}
+
+// 获取保存响应
+message GetSaveResponse {
+  int32 code = 1;                    // 状态码：0-成功，非0-失败
+  string message = 2;                // 响应消息
+  Save save = 3;                     // 保存项信息
+}
+
+// 更新保存请求
+message UpdateSaveRequest {
+  int64 user_id = 1;                 // 用户ID
+  string token = 2;                  // 用户认证令牌
+  string save_id = 3;                // 保存项ID
+  string save_name = 4;              // 保存项名称
+  string save_description = 5;       // 保存项描述
+  string save_data = 6;              // 保存的具体内容
+  string save_status = 7;            // 保存状态
+}
+
+// 更新保存响应
+message UpdateSaveResponse {
+  int32 code = 1;                    // 状态码：0-成功，非0-失败
+  string message = 2;                // 响应消息
+}
+
+// 删除保存请求
+message DeleteSaveRequest {
+  int64 user_id = 1;                 // 用户ID
+  string token = 2;                  // 用户认证令牌
+  string save_id = 3;                // 保存项ID
+}
+
+// 删除保存响应
+message DeleteSaveResponse {
+  int32 code = 1;                    // 状态码：0-成功，非0-失败
+  string message = 2;                // 响应消息
+}
+
+// 列出用户保存请求
+message ListSavesRequest {
+  int64 user_id = 1;                 // 用户ID
+  string token = 2;                  // 用户认证令牌
+  string save_type = 3;              // 保存类型（可选）
+  int32 page = 4;                    // 页码，从1开始
+  int32 page_size = 5;               // 每页数量
+}
+
+// 列出用户保存响应
+message ListSavesResponse {
+  int32 code = 1;                    // 状态码：0-成功，非0-失败
+  string message = 2;                // 响应消息
+  repeated Save saves = 3;           // 保存项列表
+  int32 total = 4;                   // 总数量
+}
+
+// 保存服务
+service SaveService {
+  // 创建保存
+  rpc CreateSave(CreateSaveRequest) returns (CreateSaveResponse) {}
+  
+  // 获取保存
+  rpc GetSave(GetSaveRequest) returns (GetSaveResponse) {}
+  
+  // 更新保存
+  rpc UpdateSave(UpdateSaveRequest) returns (UpdateSaveResponse) {}
+  
+  // 删除保存
+  rpc DeleteSave(DeleteSaveRequest) returns (DeleteSaveResponse) {}
+  
+  // 列出用户保存
+  rpc ListSaves(ListSavesRequest) returns (ListSavesResponse) {}
+}
