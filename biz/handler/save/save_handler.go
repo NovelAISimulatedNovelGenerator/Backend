@@ -4,11 +4,12 @@ package save
 
 import (
 	"context"
-	
+
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
-	
+
 	"novelai/biz/model/save"
+	svc "novelai/biz/service/save"
 )
 
 // 创建保存
@@ -23,13 +24,28 @@ func CreateSave(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	// TODO: 实现创建保存逻辑
-	
+	// 调用 service 层创建保存逻辑
+	serviceReq := &svc.CreateSaveServiceRequest{
+		UserId:          req.UserId,
+		SaveName:        req.SaveName,
+		SaveDescription: req.SaveDescription,
+		SaveData:        req.SaveData,
+		SaveType:        req.SaveType,
+	}
+	serviceResp, err := svc.Create(ctx, serviceReq)
+	if err != nil {
+		// 业务错误处理
+		c.JSON(consts.StatusInternalServerError, &save.CreateSaveResponse{
+			Code:    500,
+			Message: err.Error(),
+		})
+		return
+	}
 	// 返回成功响应
 	c.JSON(consts.StatusOK, &save.CreateSaveResponse{
 		Code:    0,
 		Message: "创建成功",
-		SaveId:  "save_123456", // 示例保存ID
+		SaveId:  serviceResp.SaveId,
 	})
 }
 
@@ -45,24 +61,31 @@ func GetSave(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	// TODO: 实现获取保存逻辑
-	
+	// 调用 service 层获取保存逻辑
+	serviceReq := &svc.GetSaveServiceRequest{
+		UserId: req.UserId,
+		SaveId: req.SaveId,
+	}
+	serviceResp, err := svc.Get(ctx, serviceReq)
+	if err != nil {
+		c.JSON(consts.StatusInternalServerError, &save.GetSaveResponse{
+			Code:    500,
+			Message: err.Error(),
+		})
+		return
+	}
+	if serviceResp.Save == nil {
+		c.JSON(consts.StatusNotFound, &save.GetSaveResponse{
+			Code:    404,
+			Message: "保存项不存在",
+		})
+		return
+	}
 	// 返回成功响应
 	c.JSON(consts.StatusOK, &save.GetSaveResponse{
 		Code:    0,
 		Message: "获取成功",
-		Save: &save.Save{
-			Id:              1,
-			UserId:          req.UserId,
-			SaveId:          req.SaveId,
-			SaveName:        "示例保存",
-			SaveDescription: "这是一个示例保存项",
-			SaveData:        "{\"content\":\"示例数据内容\"}",
-			SaveType:        "draft",
-			SaveStatus:      "active",
-			CreatedAt:       1714406400, // 示例时间戳
-			UpdatedAt:       1714406400, // 示例时间戳
-		},
+		Save:    serviceResp.Save,
 	})
 }
 

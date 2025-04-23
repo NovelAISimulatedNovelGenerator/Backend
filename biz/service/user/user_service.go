@@ -35,6 +35,15 @@ func NewUserService(ctx context.Context, c *app.RequestContext) *UserService {
 	return &UserService{ctx: ctx, c: c}
 }
 
+// generatePasswordHash 生成MD5密码哈希
+// 参数: password 明文密码
+// 返回: 加密后的字符串（32位小写MD5）
+func generatePasswordHash(password string) string {
+	hash := md5.New()
+	hash.Write([]byte(password))
+	return hex.EncodeToString(hash.Sum(nil))
+}
+
 // generateHashedToken 生成令牌哈希
 // 参数:
 //   - data: 要哈希的数据
@@ -63,10 +72,13 @@ func (s *UserService) Register(req *user.RegisterRequest) (userId int64, token s
 		return 0, "", db.ErrUserAlreadyExists
 	}
 
+	// 密码加密
+	passwordHash := generatePasswordHash(req.Password)
+
 	// 创建用户记录
 	newUser := &db.User{
 		Username: req.Username,
-		Password: req.Password, // 注意：密码已在handler层加密
+		Password: passwordHash, // service层统一加密
 		Nickname: req.Nickname,
 		Email:    req.Email,
 		Status:   1, // 默认状态：正常
