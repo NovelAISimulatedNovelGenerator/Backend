@@ -101,8 +101,22 @@ func UpdateSave(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	// TODO: 实现更新保存逻辑
-	
+	// 调用 service 层更新保存逻辑
+	serviceReq := &svc.UpdateSaveServiceRequest{
+		UserId:          req.UserId,
+		SaveId:          req.SaveId,
+		SaveName:        req.SaveName,
+		SaveDescription: req.SaveDescription,
+		SaveData:        req.SaveData,
+	} // 只传递 service 层定义的字段
+	_, err := svc.Update(ctx, serviceReq)
+	if err != nil {
+		c.JSON(consts.StatusInternalServerError, &save.UpdateSaveResponse{
+			Code:    500,
+			Message: err.Error(),
+		})
+		return
+	}
 	// 返回成功响应
 	c.JSON(consts.StatusOK, &save.UpdateSaveResponse{
 		Code:    0,
@@ -122,8 +136,19 @@ func DeleteSave(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	// TODO: 实现删除保存逻辑
-	
+	// 调用 service 层删除保存逻辑
+	serviceReq := &svc.DeleteSaveServiceRequest{
+		UserId: req.UserId,
+		SaveId: req.SaveId,
+	}
+	_, err := svc.Delete(ctx, serviceReq)
+	if err != nil {
+		c.JSON(consts.StatusInternalServerError, &save.DeleteSaveResponse{
+			Code:    500,
+			Message: err.Error(),
+		})
+		return
+	}
 	// 返回成功响应
 	c.JSON(consts.StatusOK, &save.DeleteSaveResponse{
 		Code:    0,
@@ -143,38 +168,25 @@ func ListSaves(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	// TODO: 实现列出用户保存逻辑
-	
+	// 调用 service 层列出保存逻辑
+	serviceReq := &svc.ListSavesServiceRequest{
+		UserId:   req.UserId,
+		Page:     int(req.Page),
+		PageSize: int(req.PageSize),
+	} // int32转int
+	serviceResp, err := svc.List(ctx, serviceReq)
+	if err != nil {
+		c.JSON(consts.StatusInternalServerError, &save.ListSavesResponse{
+			Code:    500,
+			Message: err.Error(),
+		})
+		return
+	}
 	// 返回成功响应
 	c.JSON(consts.StatusOK, &save.ListSavesResponse{
 		Code:    0,
 		Message: "获取成功",
-		Saves: []*save.Save{
-			{
-				Id:              1,
-				UserId:          req.UserId,
-				SaveId:          "save_123456",
-				SaveName:        "示例保存1",
-				SaveDescription: "这是一个示例保存项1",
-				SaveData:        "{\"content\":\"示例数据内容1\"}",
-				SaveType:        req.SaveType,
-				SaveStatus:      "active",
-				CreatedAt:       1714406400,
-				UpdatedAt:       1714406400,
-			},
-			{
-				Id:              2,
-				UserId:          req.UserId,
-				SaveId:          "save_234567",
-				SaveName:        "示例保存2",
-				SaveDescription: "这是一个示例保存项2",
-				SaveData:        "{\"content\":\"示例数据内容2\"}",
-				SaveType:        req.SaveType,
-				SaveStatus:      "active",
-				CreatedAt:       1714406500,
-				UpdatedAt:       1714406500,
-			},
-		},
-		Total: 2,
-	})
+		Saves:   serviceResp.Saves,
+		Total:   int32(serviceResp.Total),
+	}) // int转int32
 }
