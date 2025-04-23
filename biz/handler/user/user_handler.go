@@ -29,6 +29,7 @@ func generatePasswordHash(password string) string {
 
 // 用户注册
 // 只做参数校验和调用service层，所有业务逻辑下沉到service
+// 注册成功时响应完整 RegisterResponse，包含 code、message、user_id、token 字段，便于前端/自动化测试获取 token
 func Register(ctx context.Context, c *app.RequestContext) {
 	// 1. 参数校验
 	req := new(user.RegisterRequest)
@@ -47,9 +48,9 @@ func Register(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	// 3. 调用service
+	// 2. 调用 service 层注册逻辑，获取 userId 和 token
 	svc := service.NewUserService(ctx, c)
-	userID, _, err := svc.Register(req)
+	userID, token, err := svc.Register(req)
 	if err != nil {
 		if err == db.ErrUserAlreadyExists {
 			c.JSON(constants.StatusOK, &user.RegisterResponse{
@@ -64,15 +65,19 @@ func Register(ctx context.Context, c *app.RequestContext) {
 		})
 		return
 	}
+	// 3. 注册成功，完整返回所有字段
 	c.JSON(constants.StatusOK, &user.RegisterResponse{
-		Code:    0,
+		Code:    200,
 		Message: "注册成功",
 		UserId:  userID,
+		Token:   token,
 	})
 }
 
+
 // 用户登录
 // 只做参数校验和调用service层，所有业务逻辑下沉到service
+// 登录成功时响应完整 LoginResponse，包含 code、message、user_id、token 字段，便于前端/自动化测试获取 token
 func Login(ctx context.Context, c *app.RequestContext) {
 	req := new(user.LoginRequest)
 	if err := c.BindAndValidate(req); err != nil {
@@ -89,9 +94,10 @@ func Login(ctx context.Context, c *app.RequestContext) {
 		})
 		return
 	}
+	// 密码加密，与注册保持一致
 	req.Password = generatePasswordHash(req.Password)
 	svc := service.NewUserService(ctx, c)
-	userID, _, err := svc.Login(req)
+	userID, token, err := svc.Login(req)
 	if err != nil {
 		if err == db.ErrInvalidPassword || err == db.ErrUserNotFound {
 			c.JSON(constants.StatusOK, &user.LoginResponse{
@@ -106,12 +112,19 @@ func Login(ctx context.Context, c *app.RequestContext) {
 		})
 		return
 	}
-	c.JSON(constants.StatusOK, &user.LoginResponse{
-		Code:    0,
+	// 登录成功，完整返回所有字段，确保 user_id 字段为 int64 且 json tag 为 user_id
+	resp := &user.LoginResponse{
+		Code:    200,
 		Message: "登录成功",
-		UserId:  userID,
-	})
+		UserId:  userID, // int64 类型，json:"user_id"，与 proto 定义一致
+		Token:   token,
+	}
+	// 关键注释：user.LoginResponse 的 json tag 必须为 user_id，且类型为 int64
+	// 若前端/测试脚本仍无法获取 user_id，请检查 user.LoginResponse 结构体定义及 proto 文件
+	c.JSON(constants.StatusOK, resp)
 }
+
+
 
 // 获取用户信息
 // 只做参数校验和调用service层，所有业务逻辑下沉到service
@@ -148,7 +161,7 @@ func GetUser(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	c.JSON(constants.StatusOK, &user.GetUserResponse{
-		Code:    0,
+		Code:    200,
 		Message: "获取成功",
 		User:    userResp,
 	})
@@ -189,7 +202,7 @@ func UpdateUser(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	c.JSON(constants.StatusOK, &user.UpdateUserResponse{
-		Code:    0,
+		Code:    200,
 		Message: "更新成功",
 	})
 }

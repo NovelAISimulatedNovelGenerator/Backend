@@ -43,7 +43,7 @@ func CreateSave(ctx context.Context, c *app.RequestContext) {
 	}
 	// 返回成功响应
 	c.JSON(consts.StatusOK, &save.CreateSaveResponse{
-		Code:    0,
+		Code:    200,
 		Message: "创建成功",
 		SaveId:  serviceResp.SaveId,
 	})
@@ -83,7 +83,7 @@ func GetSave(ctx context.Context, c *app.RequestContext) {
 	}
 	// 返回成功响应
 	c.JSON(consts.StatusOK, &save.GetSaveResponse{
-		Code:    0,
+		Code:    200,
 		Message: "获取成功",
 		Save:    serviceResp.Save,
 	})
@@ -119,7 +119,7 @@ func UpdateSave(ctx context.Context, c *app.RequestContext) {
 	}
 	// 返回成功响应
 	c.JSON(consts.StatusOK, &save.UpdateSaveResponse{
-		Code:    0,
+		Code:    200,
 		Message: "更新成功",
 	})
 }
@@ -151,7 +151,7 @@ func DeleteSave(ctx context.Context, c *app.RequestContext) {
 	}
 	// 返回成功响应
 	c.JSON(consts.StatusOK, &save.DeleteSaveResponse{
-		Code:    0,
+		Code:    200,
 		Message: "删除成功",
 	})
 }
@@ -184,7 +184,7 @@ func ListSaves(ctx context.Context, c *app.RequestContext) {
 	}
 	// 返回成功响应
 	c.JSON(consts.StatusOK, &save.ListSavesResponse{
-		Code:    0,
+		Code:    200,
 		Message: "获取成功",
 		Saves:   serviceResp.Saves,
 		Total:   int32(serviceResp.Total),
