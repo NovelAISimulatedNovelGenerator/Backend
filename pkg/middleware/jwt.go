@@ -6,10 +6,15 @@ package middleware
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/hertz-contrib/jwt"
+	"novelai/biz/dal/db"
+	userpb "novelai/biz/model/user"
+	"novelai/pkg/constants"
 )
 
 // IdentityKey JWT中保存的用户唯一标识
@@ -43,11 +48,17 @@ func JwtMiddleware() (*jwt.HertzJWTMiddleware, error) {
 			if err := c.Bind(&req); err != nil {
 				return nil, jwt.ErrMissingLoginValues
 			}
-			// TODO: 调用用户模块校验用户名和密码，返回用户ID和权限
-			// 例如：user, err := db.VerifyUser(req.Username, req.Password)
-			// if err != nil { return nil, jwt.ErrFailedAuthentication }
-			// return map[string]interface{}{IdentityKey: user.ID, "role": user.Role}, nil
-			return map[string]interface{}{IdentityKey: 1, "role": "user"}, nil // 示例
+			// MD5 密码哈希
+			hash := md5.New()
+			hash.Write([]byte(req.Password))
+			req.Password = hex.EncodeToString(hash.Sum(nil))
+			// 验证用户
+			userId, err := db.VerifyUser(req.Username, req.Password)
+			if err != nil {
+				return nil, jwt.ErrFailedAuthentication
+			}
+			c.Set(IdentityKey, userId)
+			return map[string]interface{}{IdentityKey: userId}, nil
 		},
 		// Authorizator 权限校验逻辑，可扩展
 		Authorizator: func(data interface{}, ctx context.Context, c *app.RequestContext) bool {
@@ -56,9 +67,29 @@ func JwtMiddleware() (*jwt.HertzJWTMiddleware, error) {
 		},
 		// Unauthorized 未授权响应
 		Unauthorized: func(ctx context.Context, c *app.RequestContext, code int, message string) {
-			c.JSON(401, map[string]interface{}{
+			c.JSON(constants.StatusUnauthorized, map[string]interface{}{
 				"code":    code,
 				"message": message,
+			})
+		},
+		// 登录成功响应，输出 user_id 和 token
+		LoginResponse: func(ctx context.Context, c *app.RequestContext, code int, token string, expire time.Time) {
+			idVal, _ := c.Get(IdentityKey)
+			userId := idVal.(int64)
+			resp := &userpb.LoginResponse{
+				Code:    constants.StatusOK,
+				Message: "登录成功",
+				UserId:  userId,
+				Token:   token,
+			}
+			c.JSON(constants.StatusOK, resp)
+		},
+		// 刷新 token 响应
+		RefreshResponse: func(ctx context.Context, c *app.RequestContext, code int, token string, expire time.Time) {
+			c.JSON(constants.StatusOK, map[string]interface{}{
+				"code":    constants.StatusOK,
+				"message": "刷新成功",
+				"token":   token,
 			})
 		},
 	})

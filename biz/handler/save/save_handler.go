@@ -8,6 +8,8 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 
+	"novelai/pkg/middleware"
+
 	"novelai/biz/model/save"
 	svc "novelai/biz/service/save"
 )
@@ -24,9 +26,13 @@ func CreateSave(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
+	// 从 JWT 获取用户ID
+	idVal, _ := c.Get(middleware.IdentityKey)
+	userId := idVal.(int64)
+
 	// 调用 service 层创建保存逻辑
 	serviceReq := &svc.CreateSaveServiceRequest{
-		UserId:          req.UserId,
+		UserId:          userId,
 		SaveName:        req.SaveName,
 		SaveDescription: req.SaveDescription,
 		SaveData:        req.SaveData,
@@ -61,9 +67,13 @@ func GetSave(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
+	// 从 JWT 获取用户ID
+	idVal, _ := c.Get(middleware.IdentityKey)
+	userId := idVal.(int64)
+
 	// 调用 service 层获取保存逻辑
 	serviceReq := &svc.GetSaveServiceRequest{
-		UserId: req.UserId,
+		UserId: userId,
 		SaveId: req.SaveId,
 	}
 	serviceResp, err := svc.Get(ctx, serviceReq)
@@ -101,9 +111,13 @@ func UpdateSave(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
+	// 从 JWT 获取用户ID
+	idVal, _ := c.Get(middleware.IdentityKey)
+	userId := idVal.(int64)
+
 	// 调用 service 层更新保存逻辑
 	serviceReq := &svc.UpdateSaveServiceRequest{
-		UserId:          req.UserId,
+		UserId:          userId,
 		SaveId:          req.SaveId,
 		SaveName:        req.SaveName,
 		SaveDescription: req.SaveDescription,
@@ -136,9 +150,13 @@ func DeleteSave(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
+	// 从 JWT 获取用户ID
+	idVal, _ := c.Get(middleware.IdentityKey)
+	userId := idVal.(int64)
+
 	// 调用 service 层删除保存逻辑
 	serviceReq := &svc.DeleteSaveServiceRequest{
-		UserId: req.UserId,
+		UserId: userId,
 		SaveId: req.SaveId,
 	}
 	_, err := svc.Delete(ctx, serviceReq)
@@ -168,9 +186,13 @@ func ListSaves(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
+	// 从 JWT 获取用户ID
+	idVal, _ := c.Get(middleware.IdentityKey)
+	userId := idVal.(int64)
+
 	// 调用 service 层列出保存逻辑
 	serviceReq := &svc.ListSavesServiceRequest{
-		UserId:   req.UserId,
+		UserId:   userId,
 		Page:     int(req.Page),
 		PageSize: int(req.PageSize),
 	} // int32转int

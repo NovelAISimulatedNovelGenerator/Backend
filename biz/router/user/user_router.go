@@ -20,8 +20,16 @@ func RegisterRoutes(r *server.Hertz) {
 	{
 		userGroup.POST("/register", handler.Register)
 		userGroup.POST("/login", jwtMw.LoginHandler)
+		userGroup.GET("/refresh", jwtMw.RefreshHandler)
 		userGroup.Use(jwtMw.MiddlewareFunc())
+		// 用户登出
+		userGroup.POST("/logout", jwtMw.LogoutHandler)
+		// 用户信息与修改
 		userGroup.GET("/info", handler.GetUser)
 		userGroup.PUT("/update", handler.UpdateUser)
+		// 密码修改
+		userGroup.POST("/change_password", handler.ChangePassword)
+		// 用户删除（软删除）
+		userGroup.DELETE("/delete", handler.DeleteUser)
 	}
 }

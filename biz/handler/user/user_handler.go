@@ -8,12 +8,16 @@ import (
 	"encoding/hex"
 
 	"github.com/cloudwego/hertz/pkg/app"
+
 	"novelai/pkg/constants"
-	
-	"novelai/biz/model/user"
+	middleware "novelai/pkg/middleware"
+
+	userpb "novelai/biz/model/user"
 	"novelai/biz/dal/db"
 	service "novelai/biz/service/user"
 )
+
+// FIXME: import order, ensure standard, third-party, local ordering
 
 // 生成MD5密码哈希
 func generatePasswordHash(password string) string {
@@ -32,16 +36,16 @@ func generatePasswordHash(password string) string {
 // 注册成功时响应完整 RegisterResponse，包含 code、message、user_id、token 字段，便于前端/自动化测试获取 token
 func Register(ctx context.Context, c *app.RequestContext) {
 	// 1. 参数校验
-	req := new(user.RegisterRequest)
+	req := new(userpb.RegisterRequest)
 	if err := c.BindAndValidate(req); err != nil {
-		c.JSON(constants.StatusBadRequest, &user.RegisterResponse{
+		c.JSON(constants.StatusBadRequest, &userpb.RegisterResponse{
 			Code:    400,
 			Message: err.Error(),
 		})
 		return
 	}
 	if req.Username == "" || req.Password == "" {
-		c.JSON(constants.StatusBadRequest, &user.RegisterResponse{
+		c.JSON(constants.StatusBadRequest, &userpb.RegisterResponse{
 			Code:    400,
 			Message: "用户名和密码不能为空",
 		})
@@ -53,20 +57,20 @@ func Register(ctx context.Context, c *app.RequestContext) {
 	userID, token, err := svc.Register(req)
 	if err != nil {
 		if err == db.ErrUserAlreadyExists {
-			c.JSON(constants.StatusOK, &user.RegisterResponse{
+			c.JSON(constants.StatusOK, &userpb.RegisterResponse{
 				Code:    1001,
 				Message: "用户名已存在",
 			})
 			return
 		}
-		c.JSON(constants.StatusInternalServerError, &user.RegisterResponse{
+		c.JSON(constants.StatusInternalServerError, &userpb.RegisterResponse{
 			Code:    500,
 			Message: "注册失败：" + err.Error(),
 		})
 		return
 	}
 	// 3. 注册成功，完整返回所有字段
-	c.JSON(constants.StatusOK, &user.RegisterResponse{
+	c.JSON(constants.StatusOK, &userpb.RegisterResponse{
 		Code:    200,
 		Message: "注册成功",
 		UserId:  userID,
@@ -79,16 +83,16 @@ func Register(ctx context.Context, c *app.RequestContext) {
 // 只做参数校验和调用service层，所有业务逻辑下沉到service
 // 登录成功时响应完整 LoginResponse，包含 code、message、user_id、token 字段，便于前端/自动化测试获取 token
 func Login(ctx context.Context, c *app.RequestContext) {
-	req := new(user.LoginRequest)
+	req := new(userpb.LoginRequest)
 	if err := c.BindAndValidate(req); err != nil {
-		c.JSON(constants.StatusBadRequest, &user.LoginResponse{
+		c.JSON(constants.StatusBadRequest, &userpb.LoginResponse{
 			Code:    400,
 			Message: err.Error(),
 		})
 		return
 	}
 	if req.Username == "" || req.Password == "" {
-		c.JSON(constants.StatusBadRequest, &user.LoginResponse{
+		c.JSON(constants.StatusBadRequest, &userpb.LoginResponse{
 			Code:    400,
 			Message: "用户名和密码不能为空",
 		})
@@ -100,20 +104,20 @@ func Login(ctx context.Context, c *app.RequestContext) {
 	userID, token, err := svc.Login(req)
 	if err != nil {
 		if err == db.ErrInvalidPassword || err == db.ErrUserNotFound {
-			c.JSON(constants.StatusOK, &user.LoginResponse{
+			c.JSON(constants.StatusOK, &userpb.LoginResponse{
 				Code:    1002,
 				Message: "用户名或密码错误",
 			})
 			return
 		}
-		c.JSON(constants.StatusInternalServerError, &user.LoginResponse{
+		c.JSON(constants.StatusInternalServerError, &userpb.LoginResponse{
 			Code:    500,
 			Message: "登录失败：" + err.Error(),
 		})
 		return
 	}
 	// 登录成功，完整返回所有字段，确保 user_id 字段为 int64 且 json tag 为 user_id
-	resp := &user.LoginResponse{
+	resp := &userpb.LoginResponse{
 		Code:    200,
 		Message: "登录成功",
 		UserId:  userID, // int64 类型，json:"user_id"，与 proto 定义一致
@@ -129,38 +133,34 @@ func Login(ctx context.Context, c *app.RequestContext) {
 // 获取用户信息
 // 只做参数校验和调用service层，所有业务逻辑下沉到service
 func GetUser(ctx context.Context, c *app.RequestContext) {
-	req := new(user.GetUserRequest)
+	req := new(userpb.GetUserRequest)
 	if err := c.BindAndValidate(req); err != nil {
-		c.JSON(constants.StatusBadRequest, &user.GetUserResponse{
+		c.JSON(constants.StatusBadRequest, &userpb.GetUserResponse{
 			Code:    400,
 			Message: err.Error(),
 		})
 		return
 	}
-	if req.UserId <= 0 {
-		c.JSON(constants.StatusBadRequest, &user.GetUserResponse{
-			Code:    400,
-			Message: "无效的用户ID",
-		})
-		return
-	}
+	// 统一从 JWT 获取 userId，避免前端传递
+	idVal, _ := c.Get(middleware.IdentityKey)
+	userId := idVal.(int64)
 	svc := service.NewUserService(ctx, c)
-	userResp, err := svc.GetUserInfo(req.UserId)
+	userResp, err := svc.GetUserInfo(userId)
 	if err != nil {
 		if err == db.ErrUserNotFound {
-			c.JSON(constants.StatusOK, &user.GetUserResponse{
+			c.JSON(constants.StatusOK, &userpb.GetUserResponse{
 				Code:    1003,
 				Message: "用户不存在",
 			})
 			return
 		}
-		c.JSON(constants.StatusInternalServerError, &user.GetUserResponse{
+		c.JSON(constants.StatusInternalServerError, &userpb.GetUserResponse{
 			Code:    500,
 			Message: "获取用户信息失败：" + err.Error(),
 		})
 		return
 	}
-	c.JSON(constants.StatusOK, &user.GetUserResponse{
+	c.JSON(constants.StatusOK, &userpb.GetUserResponse{
 		Code:    200,
 		Message: "获取成功",
 		User:    userResp,
@@ -170,39 +170,89 @@ func GetUser(ctx context.Context, c *app.RequestContext) {
 // 更新用户信息
 // 只做参数校验和调用service层，所有业务逻辑下沉到service
 func UpdateUser(ctx context.Context, c *app.RequestContext) {
-	req := new(user.UpdateUserRequest)
+	req := new(userpb.UpdateUserRequest)
 	if err := c.BindAndValidate(req); err != nil {
-		c.JSON(constants.StatusBadRequest, &user.UpdateUserResponse{
+		c.JSON(constants.StatusBadRequest, &userpb.UpdateUserResponse{
 			Code:    400,
 			Message: err.Error(),
 		})
 		return
 	}
-	if req.UserId <= 0 {
-		c.JSON(constants.StatusBadRequest, &user.UpdateUserResponse{
-			Code:    400,
-			Message: "无效的用户ID",
-		})
-		return
-	}
+	// 统一从 JWT 获取 userId，避免前端传递
+	idVal, _ := c.Get(middleware.IdentityKey)
+	userId := idVal.(int64)
 	svc := service.NewUserService(ctx, c)
-	err := svc.UpdateUserProfile(req.UserId, req)
+	err := svc.UpdateUserProfile(userId, req)
 	if err != nil {
 		if err == db.ErrUserNotFound {
-			c.JSON(constants.StatusOK, &user.UpdateUserResponse{
+			c.JSON(constants.StatusOK, &userpb.UpdateUserResponse{
 				Code:    1003,
 				Message: "用户不存在",
 			})
 			return
 		}
-		c.JSON(constants.StatusInternalServerError, &user.UpdateUserResponse{
+		c.JSON(constants.StatusInternalServerError, &userpb.UpdateUserResponse{
 			Code:    500,
 			Message: "更新用户信息失败：" + err.Error(),
 		})
 		return
 	}
-	c.JSON(constants.StatusOK, &user.UpdateUserResponse{
+	c.JSON(constants.StatusOK, &userpb.UpdateUserResponse{
 		Code:    200,
 		Message: "更新成功",
 	})
+}
+
+// ChangePassword 修改用户密码
+func ChangePassword(ctx context.Context, c *app.RequestContext) {
+	// 请求体绑定
+	type changePasswordReq struct {
+		OldPassword string `json:"old_password"`
+		NewPassword string `json:"new_password"`
+	}
+	req := new(changePasswordReq)
+	if err := c.BindAndValidate(req); err != nil {
+		c.JSON(constants.StatusBadRequest, &userpb.UpdateUserResponse{Code: constants.StatusBadRequest, Message: err.Error()})
+		return
+	}
+	if req.OldPassword == "" || req.NewPassword == "" {
+		c.JSON(constants.StatusBadRequest, &userpb.UpdateUserResponse{Code: constants.StatusBadRequest, Message: "旧密码和新密码不能为空"})
+		return
+	}
+	// 密码哈希
+	oldHash := generatePasswordHash(req.OldPassword)
+	newHash := generatePasswordHash(req.NewPassword)
+	// 获取用户ID
+	idVal, _ := c.Get(middleware.IdentityKey)
+	userId := idVal.(int64)
+	// 调用服务
+	svc := service.NewUserService(ctx, c)
+	err := svc.UpdateUserPassword(userId, oldHash, newHash)
+	if err != nil {
+		if err == db.ErrInvalidPassword {
+			c.JSON(constants.StatusOK, &userpb.UpdateUserResponse{Code: 1002, Message: "旧密码错误"})
+			return
+		}
+		c.JSON(constants.StatusInternalServerError, &userpb.UpdateUserResponse{Code: constants.StatusInternalServerError, Message: "密码修改失败：" + err.Error()})
+		return
+	}
+	c.JSON(constants.StatusOK, &userpb.UpdateUserResponse{Code: constants.StatusOK, Message: "密码修改成功"})
+}
+
+// DeleteUser 删除当前用户（软删除）
+func DeleteUser(ctx context.Context, c *app.RequestContext) {
+	// 获取用户ID
+	idVal, _ := c.Get(middleware.IdentityKey)
+	userId := idVal.(int64)
+	svc := service.NewUserService(ctx, c)
+	err := svc.DeleteUser(userId)
+	if err != nil {
+		if err == db.ErrUserNotFound {
+			c.JSON(constants.StatusOK, &userpb.UpdateUserResponse{Code: 1003, Message: "用户不存在"})
+			return
+		}
+		c.JSON(constants.StatusInternalServerError, &userpb.UpdateUserResponse{Code: constants.StatusInternalServerError, Message: "删除用户失败：" + err.Error()})
+		return
+	}
+	c.JSON(constants.StatusOK, &userpb.UpdateUserResponse{Code: constants.StatusOK, Message: "删除成功"})
 }

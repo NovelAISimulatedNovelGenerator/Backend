@@ -206,12 +206,19 @@ func (s *UserService) UpdateUserPassword(userId int64, oldPassword, newPassword 
 	return db.UpdateUserPassword(userId, newPassword)
 }
 
-// DeleteUser 删除用户(软删除)
-// 参数:
-//   - userId: 用户ID
-// 返回:
-//   - error: 操作错误信息
+// DeleteUser 软删除用户
+// 参数: userId
+// 返回: error
 func (s *UserService) DeleteUser(userId int64) error {
+	// 检查用户是否存在
+	exists, err := db.CheckUserExists(userId)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return db.ErrUserNotFound
+	}
+	// 执行软删除
 	return db.DeleteUser(userId)
 }
 
