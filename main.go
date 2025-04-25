@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"log"
 	"os"
-	
+
 	"github.com/cloudwego/hertz/pkg/app/server"
-	
+	"github.com/cloudwego/hertz/pkg/common/hlog"
+
 	"novelai/biz/dal/db"
 )
 
@@ -55,17 +56,22 @@ func initDB() {
 }
 
 func main() {
+	// 设置 Hertz 日志级别为 debug，便于调试和问题追踪
+	hlog.SetLevel(hlog.LevelDebug)
+
 	// 初始化数据库
 	initDB()
-	log.Println("数据库初始化完成")
-	
+	hlog.Debug("数据库初始化完成")
+
 	// 创建Hertz服务器实例
 	h := server.Default()
-	
+	hlog.Debug("Hertz 服务器实例创建完成")
+
 	// 注册路由
 	register(h)
-	
+	hlog.Debug("路由注册完成")
+
 	// 启动服务器
-	log.Println("开始启动API服务...")
+	hlog.Debug("开始启动API服务...")
 	h.Spin()
 }

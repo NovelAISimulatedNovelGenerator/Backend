@@ -117,6 +117,27 @@ func QuerySavesByUser(userID int64, page, pageSize int) ([]Save, int64, error) {
 	return saves, total, nil
 }
 
+// QuerySavesBySaveID 通过保存唯一标识符查询存档
+// 参数:
+//   - saveID: 存档唯一标识符
+// 返回:
+//   - *Save: 查询到的存档指针
+//   - error: 操作错误信息
+func QuerySavesBySaveID(saveID string) (*Save, error) {
+	if saveID == "" {
+		return nil, ErrSaveNotFound
+	}
+	var save Save
+	err := DB.Where("save_id = ?", saveID).First(&save).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrSaveNotFound
+		}
+		return nil, err
+	}
+	return &save, nil
+}
+
 // UpdateSave 更新存档内容
 // 参数:
 //   - save: 包含更新内容的存档结构体，必须有ID

@@ -15,9 +15,13 @@ import (
 func AutoMigrate() error {
 	log.Println("开始自动迁移数据库表结构...")
 
-	// 添加需要迁移的模型
+	// 添加需要迁移的模型（如有新表需在此处追加）
 	if err := DB.AutoMigrate(&User{}); err != nil {
 		log.Printf("迁移用户表失败: %v", err)
+		return err
+	}
+	if err := DB.AutoMigrate(&Save{}); err != nil {
+		log.Printf("迁移保存表失败: %v", err)
 		return err
 	}
 

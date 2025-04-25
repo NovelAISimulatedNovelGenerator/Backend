@@ -8,12 +8,13 @@ import (
 	"encoding/hex"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/common/hlog"
 
 	"novelai/pkg/constants"
 	middleware "novelai/pkg/middleware"
 
-	userpb "novelai/biz/model/user"
 	"novelai/biz/dal/db"
+	userpb "novelai/biz/model/user"
 	service "novelai/biz/service/user"
 )
 
@@ -35,6 +36,8 @@ func generatePasswordHash(password string) string {
 // 只做参数校验和调用service层，所有业务逻辑下沉到service
 // 注册成功时响应完整 RegisterResponse，包含 code、message、user_id、token 字段，便于前端/自动化测试获取 token
 func Register(ctx context.Context, c *app.RequestContext) {
+	// [DEBUG] 记录注册请求参数，便于调试
+	hlog.Debugf("[Register] 请求参数: %+v", c.Request.Body())
 	// 1. 参数校验
 	req := new(userpb.RegisterRequest)
 	if err := c.BindAndValidate(req); err != nil {
@@ -78,57 +81,8 @@ func Register(ctx context.Context, c *app.RequestContext) {
 	})
 }
 
-
 // 用户登录
-// 只做参数校验和调用service层，所有业务逻辑下沉到service
-// 登录成功时响应完整 LoginResponse，包含 code、message、user_id、token 字段，便于前端/自动化测试获取 token
-func Login(ctx context.Context, c *app.RequestContext) {
-	req := new(userpb.LoginRequest)
-	if err := c.BindAndValidate(req); err != nil {
-		c.JSON(constants.StatusBadRequest, &userpb.LoginResponse{
-			Code:    400,
-			Message: err.Error(),
-		})
-		return
-	}
-	if req.Username == "" || req.Password == "" {
-		c.JSON(constants.StatusBadRequest, &userpb.LoginResponse{
-			Code:    400,
-			Message: "用户名和密码不能为空",
-		})
-		return
-	}
-	// 密码加密，与注册保持一致
-	req.Password = generatePasswordHash(req.Password)
-	svc := service.NewUserService(ctx, c)
-	userID, token, err := svc.Login(req)
-	if err != nil {
-		if err == db.ErrInvalidPassword || err == db.ErrUserNotFound {
-			c.JSON(constants.StatusOK, &userpb.LoginResponse{
-				Code:    1002,
-				Message: "用户名或密码错误",
-			})
-			return
-		}
-		c.JSON(constants.StatusInternalServerError, &userpb.LoginResponse{
-			Code:    500,
-			Message: "登录失败：" + err.Error(),
-		})
-		return
-	}
-	// 登录成功，完整返回所有字段，确保 user_id 字段为 int64 且 json tag 为 user_id
-	resp := &userpb.LoginResponse{
-		Code:    200,
-		Message: "登录成功",
-		UserId:  userID, // int64 类型，json:"user_id"，与 proto 定义一致
-		Token:   token,
-	}
-	// 关键注释：user.LoginResponse 的 json tag 必须为 user_id，且类型为 int64
-	// 若前端/测试脚本仍无法获取 user_id，请检查 user.LoginResponse 结构体定义及 proto 文件
-	c.JSON(constants.StatusOK, resp)
-}
-
-
+// 使用Hertz拓展jwt库
 
 // 获取用户信息
 // 只做参数校验和调用service层，所有业务逻辑下沉到service
@@ -143,7 +97,20 @@ func GetUser(ctx context.Context, c *app.RequestContext) {
 	}
 	// 统一从 JWT 获取 userId，避免前端传递
 	idVal, _ := c.Get(middleware.IdentityKey)
-	userId := idVal.(int64)
+	// 兼容 float64/int64 类型，防止 interface conversion panic
+	var userId int64
+	switch v := idVal.(type) {
+	case float64:
+		userId = int64(v)
+	case int64:
+		userId = v
+	default:
+		c.JSON(constants.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "无法解析用户ID（JWT类型错误）",
+		})
+		return
+	}
 	svc := service.NewUserService(ctx, c)
 	userResp, err := svc.GetUserInfo(userId)
 	if err != nil {
@@ -180,7 +147,20 @@ func UpdateUser(ctx context.Context, c *app.RequestContext) {
 	}
 	// 统一从 JWT 获取 userId，避免前端传递
 	idVal, _ := c.Get(middleware.IdentityKey)
-	userId := idVal.(int64)
+	// 兼容 float64/int64 类型，防止 interface conversion panic
+	var userId int64
+	switch v := idVal.(type) {
+	case float64:
+		userId = int64(v)
+	case int64:
+		userId = v
+	default:
+		c.JSON(constants.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "无法解析用户ID（JWT类型错误）",
+		})
+		return
+	}
 	svc := service.NewUserService(ctx, c)
 	err := svc.UpdateUserProfile(userId, req)
 	if err != nil {
@@ -224,7 +204,20 @@ func ChangePassword(ctx context.Context, c *app.RequestContext) {
 	newHash := generatePasswordHash(req.NewPassword)
 	// 获取用户ID
 	idVal, _ := c.Get(middleware.IdentityKey)
-	userId := idVal.(int64)
+	// 兼容 float64/int64 类型，防止 interface conversion panic
+	var userId int64
+	switch v := idVal.(type) {
+	case float64:
+		userId = int64(v)
+	case int64:
+		userId = v
+	default:
+		c.JSON(constants.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "无法解析用户ID（JWT类型错误）",
+		})
+		return
+	}
 	// 调用服务
 	svc := service.NewUserService(ctx, c)
 	err := svc.UpdateUserPassword(userId, oldHash, newHash)
@@ -243,7 +236,20 @@ func ChangePassword(ctx context.Context, c *app.RequestContext) {
 func DeleteUser(ctx context.Context, c *app.RequestContext) {
 	// 获取用户ID
 	idVal, _ := c.Get(middleware.IdentityKey)
-	userId := idVal.(int64)
+	// 兼容 float64/int64 类型，防止 interface conversion panic
+	var userId int64
+	switch v := idVal.(type) {
+	case float64:
+		userId = int64(v)
+	case int64:
+		userId = v
+	default:
+		c.JSON(constants.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "无法解析用户ID（JWT类型错误）",
+		})
+		return
+	}
 	svc := service.NewUserService(ctx, c)
 	err := svc.DeleteUser(userId)
 	if err != nil {
