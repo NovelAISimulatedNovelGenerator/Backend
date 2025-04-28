@@ -31,7 +31,7 @@ type User struct {
 	Username        string     `gorm:"type:varchar(64);uniqueIndex;not null" json:"username"` // 用户名，唯一
 	Password        string     `gorm:"type:varchar(256);not null" json:"-"`                   // 密码，安全起见不返回给客户端
 	Nickname        string     `gorm:"type:varchar(64)" json:"nickname"`                      // 昵称
-	Email           string     `gorm:"type:varchar(128);uniqueIndex" json:"email"`            // 邮箱
+	Email           *string    `gorm:"type:varchar(128);uniqueIndex" json:"email"`            // 邮箱
 	Avatar          string     `gorm:"type:varchar(256)" json:"avatar"`                       // 头像URL
 	BackgroundImage string     `gorm:"type:varchar(256)" json:"background_image"`             // 背景图片URL
 	Signature       string     `gorm:"type:varchar(512)" json:"signature"`                    // 个人签名

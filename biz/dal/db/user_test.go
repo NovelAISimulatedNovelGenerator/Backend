@@ -43,7 +43,8 @@ func createTestUser(t *testing.T) *User {
 		Username:        username,
 		Password:        "password123",
 		Nickname:        "测试用户",
-		Email:           email,
+		emailCopy := email
+		Email:           &emailCopy,
 		Avatar:          "https://example.com/avatar.jpg",
 		BackgroundImage: "https://example.com/bg.jpg",
 		Signature:       "这是一个测试签名",
@@ -68,11 +69,12 @@ func TestCreateUser(t *testing.T) {
 	setupTestDB(t)
 
 	// 测试正常创建用户
+	email := "user1@example.com"
 	user := &User{
 		Username:  "user1",
 		Password:  "pass123",
 		Nickname:  "用户1",
-		Email:     "user1@example.com",
+		Email:     &email,
 		Signature: "测试签名",
 	}
 
@@ -238,7 +240,8 @@ func TestListUsers(t *testing.T) {
 			Username: username,
 			Password: "password",
 			Nickname: "列表用户" + string(rune('0'+i)),
-			Email:    email,
+			emailCopy := email
+		Email:    &emailCopy,
 		}
 		_, err := CreateUser(user)
 		assert.NoError(t, err, "创建测试用户失败")

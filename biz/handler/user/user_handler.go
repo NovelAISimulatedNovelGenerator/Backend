@@ -145,6 +145,14 @@ func UpdateUser(ctx context.Context, c *app.RequestContext) {
 		})
 		return
 	}
+	// 业务必填校验：nickname、avatar、email 至少有一项不为空
+	if req.Nickname == "" && req.Avatar == "" && req.Email == "" {
+		c.JSON(constants.StatusBadRequest, &userpb.UpdateUserResponse{
+			Code:    400,
+			Message: "缺少更新内容，昵称、头像、邮箱不能同时为空",
+		})
+		return
+	}
 	// 统一从 JWT 获取 userId，避免前端传递
 	idVal, _ := c.Get(middleware.IdentityKey)
 	// 兼容 float64/int64 类型，防止 interface conversion panic
