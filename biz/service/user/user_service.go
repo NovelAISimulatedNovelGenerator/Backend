@@ -7,15 +7,13 @@ package user
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/hex"
-	"fmt"
 	"time"
-
-	"github.com/cloudwego/hertz/pkg/app"
 
 	"novelai/biz/dal/db"
 	"novelai/biz/model/user"
+	"novelai/pkg/utils/crypto"
+
+	"github.com/cloudwego/hertz/pkg/app"
 )
 
 // UserService 用户服务结构体
@@ -29,35 +27,24 @@ type UserService struct {
 // 参数:
 //   - ctx: 上下文
 //   - c: 请求上下文
+//
 // 返回:
 //   - *UserService: 用户服务实例
 func NewUserService(ctx context.Context, c *app.RequestContext) *UserService {
 	return &UserService{ctx: ctx, c: c}
 }
 
-// generatePasswordHash 生成MD5密码哈希
+// generatePasswordHash 生成MD5密码哈希（调用通用加密模块）
 // 参数: password 明文密码
 // 返回: 加密后的字符串（32位小写MD5）
 func generatePasswordHash(password string) string {
-	hash := md5.New()
-	hash.Write([]byte(password))
-	return hex.EncodeToString(hash.Sum(nil))
-}
-
-// generateHashedToken 生成令牌哈希
-// 参数:
-//   - data: 要哈希的数据
-// 返回:
-//   - string: 哈希后的字符串
-func generateHashedToken(data string) string {
-	hash := md5.New()
-	hash.Write([]byte(data))
-	return hex.EncodeToString(hash.Sum(nil))
+	return crypto.HashPassword(password)
 }
 
 // Register 处理用户注册业务逻辑
 // 参数:
 //   - req: 注册请求
+//
 // 返回:
 //   - userId: 注册成功的用户ID
 //   - token: 用户登录令牌
@@ -94,10 +81,17 @@ func (s *UserService) Register(req *user.RegisterRequest) (userId int64, token s
 		return 0, "", err
 	}
 
-	// 生成令牌 (实际实现应该在handler层，这里仅示例)
-	timestamp := time.Now().Unix()
-	tokenStr := fmt.Sprintf("%d_%s_%d", userId, req.Username, timestamp)
-	token = generateHashedToken(tokenStr)  // 这里应该调用一个TOKEN生成函数
+	claims := map[string]interface{}{
+		"user_id":   userId,
+		"username":  req.Username,
+		"timestamp": time.Now().Unix(),
+	}
+	secret := "novelai_secret_key"    // 建议用配置或常量
+	expireSeconds := int64(24 * 3600) // 24小时
+	token, err = crypto.GenerateToken(claims, secret, expireSeconds)
+	if err != nil {
+		return 0, "", err
+	}
 
 	return userId, token, nil
 }
@@ -105,6 +99,7 @@ func (s *UserService) Register(req *user.RegisterRequest) (userId int64, token s
 // Login 处理用户登录业务逻辑
 // 参数:
 //   - req: 登录请求
+//
 // 返回:
 //   - userId: 用户ID
 //   - token: 用户登录令牌
@@ -117,10 +112,17 @@ func (s *UserService) Login(req *user.LoginRequest) (userId int64, token string,
 		return 0, "", err
 	}
 
-	// 生成令牌 (实际实现应该在handler层，这里仅示例)
-	timestamp := time.Now().Unix()
-	tokenStr := fmt.Sprintf("%d_%s_%d", userId, req.Username, timestamp)
-	token = generateHashedToken(tokenStr)  // 这里应该调用一个TOKEN生成函数
+	claims := map[string]interface{}{
+		"user_id":   userId,
+		"username":  req.Username,
+		"timestamp": time.Now().Unix(),
+	}
+	secret := "novelai_secret_key"    // 建议用配置或常量
+	expireSeconds := int64(24 * 3600) // 24小时
+	token, err = crypto.GenerateToken(claims, secret, expireSeconds)
+	if err != nil {
+		return 0, "", err
+	}
 
 	return userId, token, nil
 }
@@ -128,6 +130,7 @@ func (s *UserService) Login(req *user.LoginRequest) (userId int64, token string,
 // GetUserInfo 获取用户信息
 // 参数:
 //   - userId: 目标用户ID
+//
 // 返回:
 //   - *user.User: 用户信息
 //   - error: 操作错误信息
@@ -140,12 +143,12 @@ func (s *UserService) GetUserInfo(userId int64) (*user.User, error) {
 
 	// 构建用户对象
 	userInfo := &user.User{
-		Id:       dbUser.ID,
-		Username: dbUser.Username,
-		Nickname: dbUser.Nickname,
-		Email:    "",
-		Avatar:   dbUser.Avatar,
-		Status:   int32(dbUser.Status),
+		Id:        dbUser.ID,
+		Username:  dbUser.Username,
+		Nickname:  dbUser.Nickname,
+		Email:     "",
+		Avatar:    dbUser.Avatar,
+		Status:    int32(dbUser.Status),
 		CreatedAt: dbUser.CreatedAt.Unix(),
 	}
 	if dbUser.Email != nil {
@@ -165,6 +168,7 @@ func (s *UserService) GetUserInfo(userId int64) (*user.User, error) {
 // 参数:
 //   - userId: 用户ID
 //   - req: 更新请求
+//
 // 返回:
 //   - error: 操作错误信息
 func (s *UserService) UpdateUserProfile(userId int64, req *user.UpdateUserRequest) error {
@@ -198,6 +202,7 @@ func (s *UserService) UpdateUserProfile(userId int64, req *user.UpdateUserReques
 //   - userId: 用户ID
 //   - oldPassword: 旧密码(已加密)
 //   - newPassword: 新密码(已加密)
+//
 // 返回:
 //   - error: 操作错误信息
 func (s *UserService) UpdateUserPassword(userId int64, oldPassword, newPassword string) error {
@@ -206,7 +211,7 @@ func (s *UserService) UpdateUserPassword(userId int64, oldPassword, newPassword 
 	if err != nil {
 		return err
 	}
-	
+
 	// 验证旧密码是否正确
 	_, err = db.VerifyUser(user.Username, oldPassword)
 	if err != nil {
@@ -237,6 +242,7 @@ func (s *UserService) DeleteUser(userId int64) error {
 // 参数:
 //   - page: 页码
 //   - pageSize: 每页记录数
+//
 // 返回:
 //   - []*user.User: 用户列表
 //   - int64: 总记录数
@@ -252,12 +258,12 @@ func (s *UserService) ListUsers(page, pageSize int) ([]*user.User, int64, error)
 	users := make([]*user.User, 0, len(dbUsers))
 	for _, dbUser := range dbUsers {
 		userInfo := &user.User{
-			Id:       dbUser.ID,
-			Username: dbUser.Username,
-			Nickname: dbUser.Nickname,
-			Email:    "",
-			Avatar:   dbUser.Avatar,
-			Status:   int32(dbUser.Status),
+			Id:        dbUser.ID,
+			Username:  dbUser.Username,
+			Nickname:  dbUser.Nickname,
+			Email:     "",
+			Avatar:    dbUser.Avatar,
+			Status:    int32(dbUser.Status),
 			CreatedAt: dbUser.CreatedAt.Unix(),
 		}
 		if dbUser.Email != nil {

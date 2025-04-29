@@ -4,14 +4,13 @@ package user
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/hex"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 
 	"novelai/pkg/constants"
 	middleware "novelai/pkg/middleware"
+	utilscrypto "novelai/pkg/utils/crypto"
 
 	"novelai/biz/dal/db"
 	userpb "novelai/biz/model/user"
@@ -20,11 +19,10 @@ import (
 
 // FIXME: import order, ensure standard, third-party, local ordering
 
-// 生成MD5密码哈希
+// 生成MD5密码哈希（调用通用工具函数）
 func generatePasswordHash(password string) string {
-	hash := md5.New()
-	hash.Write([]byte(password))
-	return hex.EncodeToString(hash.Sum(nil))
+	// 直接复用 pkg/utils/crypto/password 的 HashPassword
+	return utilscrypto.HashPassword(password)
 }
 
 // 已废弃：原generateToken函数

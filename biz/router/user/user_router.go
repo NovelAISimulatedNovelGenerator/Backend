@@ -6,10 +6,10 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 
 	handler "novelai/biz/handler/user"
+	"novelai/pkg/middleware"
 )
 
 // 注册用户相关路由
-import "novelai/pkg/middleware"
 
 func RegisterRoutes(r *server.Hertz) {
 	jwtMw, err := middleware.JwtMiddleware()

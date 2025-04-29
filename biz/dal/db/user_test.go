@@ -43,8 +43,7 @@ func createTestUser(t *testing.T) *User {
 		Username:        username,
 		Password:        "password123",
 		Nickname:        "测试用户",
-		emailCopy := email
-		Email:           &emailCopy,
+		Email:           &email,
 		Avatar:          "https://example.com/avatar.jpg",
 		BackgroundImage: "https://example.com/bg.jpg",
 		Signature:       "这是一个测试签名",
@@ -235,12 +234,11 @@ func TestListUsers(t *testing.T) {
 		timestamp := time.Now().UnixNano() + int64(i)
 		username := "listuser" + string(rune('a'+i)) + string(rune(timestamp%10+'0'))
 		email := username + "@example.com"
-		
+		emailCopy := email
 		user := &User{
 			Username: username,
 			Password: "password",
 			Nickname: "列表用户" + string(rune('0'+i)),
-			emailCopy := email
 		Email:    &emailCopy,
 		}
 		_, err := CreateUser(user)

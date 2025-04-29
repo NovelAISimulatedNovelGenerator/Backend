@@ -4,8 +4,7 @@ package jwt
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/hex"
+
 	"time"
 
 	"novelai/biz/dal/db"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/hertz-contrib/jwt"
+	"novelai/pkg/utils/crypto"
 )
 
 // Authenticator 返回 JWT Authenticator 实现
@@ -35,9 +35,7 @@ func authenticator(ctx context.Context, c *app.RequestContext) (interface{}, err
 	if err := c.Bind(&req); err != nil {
 		return nil, jwt.ErrMissingLoginValues
 	}
-	hash := md5.New()
-	hash.Write([]byte(req.Password))
-	req.Password = hex.EncodeToString(hash.Sum(nil))
+	req.Password = crypto.HashPassword(req.Password)
 	userId, err := db.VerifyUser(req.Username, req.Password)
 	if err != nil {
 		return nil, jwt.ErrFailedAuthentication
