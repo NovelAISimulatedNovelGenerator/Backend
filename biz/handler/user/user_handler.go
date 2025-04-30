@@ -32,7 +32,7 @@ func generatePasswordHash(password string) string {
 
 // 用户注册
 // 只做参数校验和调用service层，所有业务逻辑下沉到service
-// 注册成功时响应完整 RegisterResponse，包含 code、message、user_id、token 字段，便于前端/自动化测试获取 token
+// 注册成功时响应 RegisterResponse，仅包含 code、message、user_id 字段，token 由 JWT 中间件统一生成和响应
 func Register(ctx context.Context, c *app.RequestContext) {
 	// [DEBUG] 记录注册请求参数，便于调试
 	hlog.Debugf("[Register] 请求参数: %+v", c.Request.Body())
@@ -55,7 +55,7 @@ func Register(ctx context.Context, c *app.RequestContext) {
 
 	// 2. 调用 service 层注册逻辑，获取 userId 和 token
 	svc := service.NewUserService(ctx, c)
-	userID, token, err := svc.Register(req)
+	userID, err := svc.Register(req)
 	if err != nil {
 		if err == db.ErrUserAlreadyExists {
 			c.JSON(constants.StatusOK, &userpb.RegisterResponse{
@@ -75,7 +75,6 @@ func Register(ctx context.Context, c *app.RequestContext) {
 		Code:    200,
 		Message: "注册成功",
 		UserId:  userID,
-		Token:   token,
 	})
 }
 

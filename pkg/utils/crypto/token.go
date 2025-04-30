@@ -1,3 +1,6 @@
+// 已废弃：自定义 token 逻辑已迁移至 JWT 中间件
+// 此文件保留空壳，便于后续安全移除
+
 package crypto
 
 import (

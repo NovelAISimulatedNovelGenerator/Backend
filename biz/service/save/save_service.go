@@ -236,9 +236,6 @@ type ListSavesServiceResponse struct {
 // List 列出保存业务逻辑，返回保存项列表和错误
 // ctx: 上下文，req: 列出请求参数
 // 返回: 列表结果和错误
-// List 列出保存业务逻辑，返回保存项列表和错误
-// ctx: 上下文，req: 列出请求参数
-// 返回: 列表结果和错误
 func List(ctx context.Context, req *ListSavesServiceRequest) (*ListSavesServiceResponse, error) {
 	if req == nil || req.UserId <= 0 || req.Page < 1 || req.PageSize < 1 {
 		return nil, ErrInvalidRequest

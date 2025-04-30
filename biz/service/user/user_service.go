@@ -7,7 +7,6 @@ package user
 
 import (
 	"context"
-	"time"
 
 	"novelai/biz/dal/db"
 	"novelai/biz/model/user"
@@ -41,22 +40,20 @@ func generatePasswordHash(password string) string {
 	return crypto.HashPassword(password)
 }
 
-// Register 处理用户注册业务逻辑
+// Register 处理用户注册业务逻辑（已重构，token 交由 JWT 中间件统一生成）
 // 参数:
 //   - req: 注册请求
-//
 // 返回:
-//   - userId: 注册成功的用户ID
-//   - token: 用户登录令牌
+//   - userId: 用户ID
 //   - error: 操作错误信息
-func (s *UserService) Register(req *user.RegisterRequest) (userId int64, token string, err error) {
+func (s *UserService) Register(req *user.RegisterRequest) (userId int64, err error) {
 	// 检查用户名是否已存在
 	existUser, err := db.QueryUserByUsername(req.Username)
 	if err != nil && err != db.ErrUserNotFound {
-		return 0, "", err
+		return 0, err
 	}
 	if existUser != nil {
-		return 0, "", db.ErrUserAlreadyExists
+		return 0, db.ErrUserAlreadyExists
 	}
 
 	// 密码加密
@@ -78,53 +75,26 @@ func (s *UserService) Register(req *user.RegisterRequest) (userId int64, token s
 	// 调用数据库层创建用户
 	userId, err = db.CreateUser(newUser)
 	if err != nil {
-		return 0, "", err
+		return 0, err
 	}
 
-	claims := map[string]interface{}{
-		"user_id":   userId,
-		"username":  req.Username,
-		"timestamp": time.Now().Unix(),
-	}
-	secret := "novelai_secret_key"    // 建议用配置或常量
-	expireSeconds := int64(24 * 3600) // 24小时
-	token, err = crypto.GenerateToken(claims, secret, expireSeconds)
-	if err != nil {
-		return 0, "", err
-	}
-
-	return userId, token, nil
+	return userId, nil
 }
 
-// Login 处理用户登录业务逻辑
+// Login 处理用户登录业务逻辑（已重构，token 交由 JWT 中间件统一生成）
 // 参数:
 //   - req: 登录请求
-//
 // 返回:
 //   - userId: 用户ID
-//   - token: 用户登录令牌
 //   - error: 操作错误信息
-func (s *UserService) Login(req *user.LoginRequest) (userId int64, token string, err error) {
+func (s *UserService) Login(req *user.LoginRequest) (userId int64, err error) {
 	// 调用数据库层验证用户名和密码
 	// 注意：密码已在handler层加密
 	userId, err = db.VerifyUser(req.Username, req.Password)
 	if err != nil {
-		return 0, "", err
+		return 0, err
 	}
-
-	claims := map[string]interface{}{
-		"user_id":   userId,
-		"username":  req.Username,
-		"timestamp": time.Now().Unix(),
-	}
-	secret := "novelai_secret_key"    // 建议用配置或常量
-	expireSeconds := int64(24 * 3600) // 24小时
-	token, err = crypto.GenerateToken(claims, secret, expireSeconds)
-	if err != nil {
-		return 0, "", err
-	}
-
-	return userId, token, nil
+	return userId, nil
 }
 
 // GetUserInfo 获取用户信息

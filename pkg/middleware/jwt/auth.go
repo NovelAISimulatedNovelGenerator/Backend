@@ -44,24 +44,6 @@ func authenticator(ctx context.Context, c *app.RequestContext) (interface{}, err
 	return map[string]interface{}{IdentityKey: userId}, nil
 }
 
-// Authorizator 返回 JWT Authorizator 实现
-// 用于 hertz-contrib/jwt 中间件配置，负责权限校验逻辑
-// 返回一个闭包，签名为 func(data interface{}, ctx context.Context, c *app.RequestContext) bool
-// data: PayloadFunc 生成的 claims 数据
-// ctx: 上下文，c: hertz 请求上下文
-// 返回值：true 表示有权限，false 表示无权限
-func Authorizator() func(data interface{}, ctx context.Context, c *app.RequestContext) bool {
-	return authorizator
-}
-
-// authorizator 权限校验实现
-// data: PayloadFunc 生成的 claims 数据
-// ctx: 上下文，c: hertz 请求上下文
-// 返回值：true 表示有权限，false 表示无权限
-// 可根据 data["role"] 等扩展权限控制
-func authorizator(data interface{}, ctx context.Context, c *app.RequestContext) bool {
-	return true
-}
 
 // PayloadFunc 返回 JWT PayloadFunc 实现
 // 用于 hertz-contrib/jwt 中间件配置，负责生成 JWT token 的 claims 数据

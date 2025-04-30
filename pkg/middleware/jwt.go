@@ -27,7 +27,6 @@ func JwtMiddleware() (*jwt.HertzJWTMiddleware, error) {
 		IdentityKey:     jwtImpl.IdentityKey,
 		PayloadFunc:     jwtImpl.PayloadFunc(),
 		Authenticator:   jwtImpl.Authenticator(),
-		Authorizator:    jwtImpl.Authorizator(),
 		Unauthorized:    jwtImpl.Unauthorized(),
 		LoginResponse:   jwtImpl.LoginResponse(),
 		RefreshResponse: jwtImpl.RefreshResponse(),
