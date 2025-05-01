@@ -14,8 +14,14 @@ import (
 
 // 示例: 如何使用非流式文本生成
 func ExampleCompletion() {
-	// 创建客户端，替换为您的API密钥
-	client, err := NewClient("sk-b5c20e4f22554507898597fce2ed65ac")
+	// 从环境变量读取API密钥
+	apiKey := os.Getenv("DEEPSEEK_API_KEY")
+	if apiKey == "" {
+		fmt.Println("环境变量 DEEPSEEK_API_KEY 未设置")
+		return
+	}
+	// 创建客户端，使用环境变量中的API密钥
+	client, err := NewClient(apiKey)
 	if err != nil {
 		fmt.Printf("创建客户端错误: %v\n", err)
 		return
@@ -54,8 +60,14 @@ func ExampleCompletion() {
 
 // 示例: 如何使用非流式聊天
 func ExampleChatCompletion() {
-	// 创建客户端，替换为您的API密钥
-	client, err := NewClient("sk-b5c20e4f22554507898597fce2ed65ac")
+	// 从环境变量读取API密钥
+	apiKey := os.Getenv("DEEPSEEK_API_KEY")
+	if apiKey == "" {
+		fmt.Println("环境变量 DEEPSEEK_API_KEY 未设置")
+		return
+	}
+	// 创建客户端，使用环境变量中的API密钥
+	client, err := NewClient(apiKey)
 	if err != nil {
 		fmt.Printf("创建客户端错误: %v\n", err)
 		return
@@ -101,8 +113,14 @@ func ExampleChatCompletion() {
 
 // 示例: 如何使用流式文本生成
 func ExampleCompletionStream() {
-	// 创建客户端，替换为您的API密钥
-	client, err := NewClient("sk-b5c20e4f22554507898597fce2ed65ac")
+	// 从环境变量读取API密钥
+	apiKey := os.Getenv("DEEPSEEK_API_KEY")
+	if apiKey == "" {
+		fmt.Println("环境变量 DEEPSEEK_API_KEY 未设置")
+		return
+	}
+	// 创建客户端，使用环境变量中的API密钥
+	client, err := NewClient(apiKey)
 	if err != nil {
 		fmt.Printf("创建客户端错误: %v\n", err)
 		return
@@ -184,8 +202,14 @@ func ExampleCompletionStream() {
 
 // 示例: 如何使用流式聊天
 func ExampleChatCompletionStream() {
-	// 创建客户端，替换为您的API密钥
-	client, err := NewClient("sk-b5c20e4f22554507898597fce2ed65ac")
+	// 从环境变量读取API密钥
+	apiKey := os.Getenv("DEEPSEEK_API_KEY")
+	if apiKey == "" {
+		fmt.Println("环境变量 DEEPSEEK_API_KEY 未设置")
+		return
+	}
+	// 创建客户端，使用环境变量中的API密钥
+	client, err := NewClient(apiKey)
 	if err != nil {
 		fmt.Printf("创建客户端错误: %v\n", err)
 		return
@@ -267,8 +291,14 @@ func ExampleChatCompletionStream() {
 
 // 示例: 如何使用简化的适配器接口
 func ExampleAdapter() {
-	// 创建适配器，替换为您的API密钥
-	adapter, err := NewAdapter("sk-b5c20e4f22554507898597fce2ed65ac")
+	// 从环境变量读取API密钥
+	apiKey := os.Getenv("DEEPSEEK_API_KEY")
+	if apiKey == "" {
+		fmt.Println("环境变量 DEEPSEEK_API_KEY 未设置")
+		return
+	}
+	// 创建适配器，使用环境变量中的API密钥
+	adapter, err := NewAdapter(apiKey)
 	if err != nil {
 		fmt.Printf("创建适配器错误: %v\n", err)
 		return
@@ -311,8 +341,14 @@ func ExampleAdapter() {
 
 // 示例: 如何使用适配器的流式API
 func ExampleAdapterStream() {
-	// 创建适配器，替换为您的API密钥
-	adapter, err := NewAdapter("sk-b5c20e4f22554507898597fce2ed65ac")
+	// 从环境变量读取API密钥
+	apiKey := os.Getenv("DEEPSEEK_API_KEY")
+	if apiKey == "" {
+		fmt.Println("环境变量 DEEPSEEK_API_KEY 未设置")
+		return
+	}
+	// 创建适配器，使用环境变量中的API密钥
+	adapter, err := NewAdapter(apiKey)
 	if err != nil {
 		fmt.Printf("创建适配器错误: %v\n", err)
 		return

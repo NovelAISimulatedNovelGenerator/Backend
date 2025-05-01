@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 
 	"novelai/pkg/constants"
 	"novelai/pkg/req/deepseek"
@@ -22,7 +23,7 @@ func main() {
 	// 5. 获取模型列表（models, v1）
 
 	// 从环境变量读取 API Key，确保安全
-	apiKey := "sk-2b2644ac24024ccd82d0b47ab28a78a0"
+	apiKey := os.Getenv("DEEPSEEK_API_KEY")
 	if apiKey == "" {
 		fmt.Println("请先设置环境变量 DEEPSEEK_API_KEY")
 		return
