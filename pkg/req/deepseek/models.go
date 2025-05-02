@@ -10,34 +10,43 @@ import "novelai/pkg/constants"
 type Message struct {
 	// Role 是消息的角色，可以是 system、user 或 assistant
 	Role string `json:"role"`
-	
+
 	// Content 是消息的内容
 	Content string `json:"content"`
+}
+
+// ResponseFormat 指定模型输出格式（如 JSON 模式）
+type ResponseFormat struct {
+	// Type 指定输出类型，可选值为 "text" 或 "json_object"
+	// - "text"：默认值，输出普通文本
+	// - "json_object"：启用 JSON 模式，强制输出有效 JSON
+	// 注意：若启用 JSON 模式，需在系统/用户消息中明确指示模型输出 JSON，否则可能生成空白字符直至超出 max_tokens，导致响应变慢或被截断。
+	Type string `json:"type"` // 只能为 "text" 或 "json_object"，默认 "text"
 }
 
 // CompletionRequest 表示文本生成请求
 type CompletionRequest struct {
 	// Model 是使用的模型名称
 	Model string `json:"model"`
-	
+
 	// Prompt 是提示语
 	Prompt string `json:"prompt,omitempty"`
-	
+
 	// MaxTokens 是生成的最大token数量
 	MaxTokens int `json:"max_tokens,omitempty"`
-	
+
 	// Temperature 控制生成的随机性
 	Temperature float64 `json:"temperature,omitempty"`
-	
+
 	// TopP 控制采样的token占比
 	TopP float64 `json:"top_p,omitempty"`
-	
+
 	// N 生成的结果数量
 	N int `json:"n,omitempty"`
-	
+
 	// Stream 是否使用流式响应
 	Stream bool `json:"stream,omitempty"`
-	
+
 	// Stop 是停止生成的序列
 	Stop []string `json:"stop,omitempty"`
 }
@@ -46,27 +55,30 @@ type CompletionRequest struct {
 type ChatRequest struct {
 	// Model 是使用的模型名称
 	Model string `json:"model"`
-	
+
 	// Messages 是聊天消息列表
 	Messages []Message `json:"messages"`
-	
+
 	// MaxTokens 是生成的最大token数量
 	MaxTokens int `json:"max_tokens,omitempty"`
-	
+
 	// Temperature 控制生成的随机性
 	Temperature float64 `json:"temperature,omitempty"`
-	
+
 	// TopP 控制采样的token占比
 	TopP float64 `json:"top_p,omitempty"`
-	
+
 	// N 生成的结果数量
 	N int `json:"n,omitempty"`
-	
+
 	// Stream 是否使用流式响应
 	Stream bool `json:"stream,omitempty"`
-	
+
 	// Stop 是停止生成的序列
 	Stop []string `json:"stop,omitempty"`
+
+	// ResponseFormat 指定模型输出格式（如 JSON 模式）
+	ResponseFormat ResponseFormat `json:"response_format,omitempty"`
 }
 
 // MessageBuilder 用于构建聊天消息序列
