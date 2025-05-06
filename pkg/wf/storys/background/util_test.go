@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"novelai/pkg/constants"
-	"novelai/pkg/req/deepseek"
+	"novelai/pkg/llm/deepseek"
 )
 
 func TestWorldviewStringAndParse(t *testing.T) {
