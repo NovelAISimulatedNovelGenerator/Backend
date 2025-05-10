@@ -152,6 +152,7 @@ func TestActualCreation(t *testing.T) {
 }
 
 func TestOllamaActualCreation(t *testing.T) {
+	t.Skip("测试跳过")
 	prompt := "你是一个小说背景生成助手，请生成一个主世界观，包括名称、描述、标签。请严格按照如下 JSON 格式输出：{\"name\": \"\", \"description\": \"\", \"tag\": \"\"}不要输出除 JSON 以外的内容。"
 	client, err := api.ClientFromEnvironment()
 	if err != nil {
@@ -181,6 +182,7 @@ func TestOllamaActualCreation(t *testing.T) {
 
 // TestOllamaWithBackgroundConversion 测试 Ollama 生成的内容通过 Background 结构体的完整转换流程
 func TestOllamaWithBackgroundConversion(t *testing.T) {
+	t.Skip("测试跳过")
 	// 1. 使用 Ollama 生成背景数据
 	prompt := "你是一个小说背景生成助手，请生成一个故事背景，包括名称、描述、标签。请严格按照如下 JSON 格式输出：{\"name\": \"\", \"description\": \"\", \"tag\": \"\"}不要输出除 JSON 以外的内容。"
 	client, err := api.ClientFromEnvironment()
@@ -262,6 +264,7 @@ func TestOllamaWithBackgroundConversion(t *testing.T) {
 
 // TestOllamaWithWorldviewConversion 测试 Ollama 生成的内容通过 Worldview 结构体的完整转换流程
 func TestOllamaWithWorldviewConversion(t *testing.T) {
+	t.Skip("测试跳过")
 	// 1. 使用 Ollama 生成世界观数据
 	prompt := "你是一个小说世界观生成助手，请生成一个主世界观，包括名称、描述、标签。请严格按照如下 JSON 格式输出：{\"name\": \"\", \"description\": \"\", \"tag\": \"\"}不要输出除 JSON 以外的内容。"
 	client, err := api.ClientFromEnvironment()
@@ -341,6 +344,7 @@ func TestOllamaWithWorldviewConversion(t *testing.T) {
 
 // TestOllamaWithRuleConversion 测试 Ollama 生成的内容通过 Rule 结构体的完整转换流程
 func TestOllamaWithRuleConversion(t *testing.T) {
+	t.Skip("测试跳过")
 	// 1. 使用 Ollama 生成规则数据
 	prompt := "你是一个小说规则生成助手，请生成一个世界规则，包括名称、描述、标签。请严格按照如下 JSON 格式输出：{\"name\": \"\", \"description\": \"\", \"tag\": \"\"}不要输出除 JSON 以外的内容。"
 	client, err := api.ClientFromEnvironment()
