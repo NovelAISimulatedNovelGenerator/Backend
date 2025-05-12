@@ -4,8 +4,6 @@ package background;
 
 option go_package = "novelai/background";
 
-import "google/protobuf/timestamp.proto";
-
 // Worldview 世界观信息
 message Worldview {
     int64 id = 1;                               // 世界观ID
@@ -15,8 +13,8 @@ message Worldview {
     int64 parent_id = 5;                        // 父世界观ID，0表示主世界观 (顶级世界观)
     // Note: Representing full children list here can lead to large messages and recursion issues.
     // It's often better to fetch children via a separate ListWorldviewsRequest with parent_id.
-    google.protobuf.Timestamp created_at = 6;   // 创建时间
-    google.protobuf.Timestamp updated_at = 7;   // 更新时间
+    int64 created_at = 6;                       // 创建时间 (unix timestamp)
+    int64 updated_at = 7;                       // 更新时间 (unix timestamp)
 }
 
 // Rule 规则信息
@@ -27,8 +25,8 @@ message Rule {
     string description = 4;                     // 规则详细描述
     string tag = 5;                             // 标签，多个标签用英文逗号分隔
     int64 parent_id = 6;                        // 父规则ID，0表示主规则 (顶级规则)
-    google.protobuf.Timestamp created_at = 7;   // 创建时间
-    google.protobuf.Timestamp updated_at = 8;   // 更新时间
+    int64 created_at = 7;                       // 创建时间 (unix timestamp)
+    int64 updated_at = 8;                       // 更新时间 (unix timestamp)
 }
 
 // BackgroundInfo 背景信息 (renamed from Background to avoid potential Go keyword conflicts if generated type is just Background)
@@ -39,8 +37,8 @@ message BackgroundInfo {
     string description = 4;                     // 背景详细描述
     string tag = 5;                             // 标签，多个标签用英文逗号分隔
     int64 parent_id = 6;                        // 父背景ID，0表示主背景 (顶级背景)
-    google.protobuf.Timestamp created_at = 7;   // 创建时间
-    google.protobuf.Timestamp updated_at = 8;   // 更新时间
+    int64 created_at = 7;                       // 创建时间 (unix timestamp)
+    int64 updated_at = 8;                       // 更新时间 (unix timestamp)
 }
 
 // --- Worldview RPC 请求与响应 ---

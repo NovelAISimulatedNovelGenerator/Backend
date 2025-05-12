@@ -6,6 +6,7 @@
 package db
 
 import (
+	"strconv"
 	"testing"
 	"time"
 
@@ -40,17 +41,15 @@ func createTestUser(t *testing.T) *User {
 	email := username + "@example.com"
 	
 	user := &User{
-		Username:        username,
-		Password:        "password123",
-		Nickname:        "测试用户",
-		Email:           &email,
-		Avatar:          "https://example.com/avatar.jpg",
-		BackgroundImage: "https://example.com/bg.jpg",
-		Signature:       "这是一个测试签名",
-		IsAdmin:         false,
-		Status:          1,
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
+		Username: username,
+		Password: "password123",
+		Nickname: "测试用户",
+		Email:    email,
+		Avatar:   "https://example.com/avatar.jpg",
+		Status:   0,
+		// Unix时间戳（毫秒）
+		CreatedAt: time.Now().UnixMilli(),
+		UpdatedAt: time.Now().UnixMilli(),
 	}
 
 	id, err := CreateUser(user)
@@ -73,8 +72,10 @@ func TestCreateUser(t *testing.T) {
 		Username:  "user1",
 		Password:  "pass123",
 		Nickname:  "用户1",
-		Email:     &email,
-		Signature: "测试签名",
+		Email:     email,
+		Status:    0,
+		CreatedAt: time.Now().UnixMilli(),
+		UpdatedAt: time.Now().UnixMilli(),
 	}
 
 	id, err := CreateUser(user)
@@ -155,11 +156,11 @@ func TestUpdateUserProfile(t *testing.T) {
 
 	// 更新用户资料
 	updatedUser := &User{
-		ID:              originalUser.ID,
-		Nickname:        "更新后的昵称",
-		Avatar:          "https://example.com/new-avatar.jpg",
-		BackgroundImage: "https://example.com/new-bg.jpg",
-		Signature:       "更新后的签名",
+		ID:       originalUser.ID,
+		Nickname: "更新后的昵称",
+		Avatar:   "https://example.com/new-avatar.jpg",
+		Email:    "updated_" + originalUser.Email,
+		Status:   originalUser.Status,
 	}
 
 	err := UpdateUserProfile(updatedUser)
@@ -170,7 +171,8 @@ func TestUpdateUserProfile(t *testing.T) {
 	assert.NoError(t, err, "查询更新后的用户失败")
 	assert.Equal(t, updatedUser.Nickname, user.Nickname, "昵称应已更新")
 	assert.Equal(t, updatedUser.Avatar, user.Avatar, "头像应已更新")
-	assert.Equal(t, updatedUser.Signature, user.Signature, "签名应已更新")
+	assert.Equal(t, updatedUser.Email, user.Email, "邮箱应已更新")
+	assert.Equal(t, updatedUser.Status, user.Status, "状态应已更新")
 	assert.Equal(t, originalUser.Username, user.Username, "用户名不应变化")
 	assert.Equal(t, originalUser.Password, user.Password, "密码不应变化")
 
@@ -234,12 +236,14 @@ func TestListUsers(t *testing.T) {
 		timestamp := time.Now().UnixNano() + int64(i)
 		username := "listuser" + string(rune('a'+i)) + string(rune(timestamp%10+'0'))
 		email := username + "@example.com"
-		emailCopy := email
 		user := &User{
 			Username: username,
 			Password: "password",
 			Nickname: "列表用户" + string(rune('0'+i)),
-		Email:    &emailCopy,
+			Email:    email + "_" + strconv.Itoa(i),
+			Status:   0,
+			CreatedAt: time.Now().UnixMilli(),
+			UpdatedAt: time.Now().UnixMilli(),
 		}
 		_, err := CreateUser(user)
 		assert.NoError(t, err, "创建测试用户失败")

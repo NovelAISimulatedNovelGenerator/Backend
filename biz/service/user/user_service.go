@@ -60,16 +60,12 @@ func (s *UserService) Register(req *user.RegisterRequest) (userId int64, err err
 	passwordHash := generatePasswordHash(req.Password)
 
 	// 创建用户记录
-	var emailPtr *string
-	if req.Email != "" {
-		emailPtr = &req.Email
-	}
 	newUser := &db.User{
 		Username: req.Username,
 		Password: passwordHash, // service层统一加密
 		Nickname: req.Nickname,
-		Email:    emailPtr,
-		Status:   1, // 默认状态：正常
+		Email:    req.Email,
+		Status:   0, // 默认状态：正常
 	}
 
 	// 调用数据库层创建用户
@@ -116,19 +112,11 @@ func (s *UserService) GetUserInfo(userId int64) (*user.User, error) {
 		Id:        dbUser.ID,
 		Username:  dbUser.Username,
 		Nickname:  dbUser.Nickname,
-		Email:     "",
+		Email:     dbUser.Email,
 		Avatar:    dbUser.Avatar,
-		Status:    int32(dbUser.Status),
-		CreatedAt: dbUser.CreatedAt.Unix(),
-	}
-	if dbUser.Email != nil {
-		userInfo.Email = *dbUser.Email
-	}
-
-	// 更新时间，如果有的话
-	if !dbUser.UpdatedAt.IsZero() {
-		updatedAt := dbUser.UpdatedAt.Unix()
-		userInfo.UpdatedAt = updatedAt
+		Status:    dbUser.Status,
+		CreatedAt: dbUser.CreatedAt,
+		UpdatedAt: dbUser.UpdatedAt,
 	}
 
 	return userInfo, nil
@@ -152,15 +140,11 @@ func (s *UserService) UpdateUserProfile(userId int64, req *user.UpdateUserReques
 	}
 
 	// 构建更新对象
-	var emailPtr *string
-	if req.Email != "" {
-		emailPtr = &req.Email
-	}
 	updateUser := &db.User{
 		ID:       userId,
 		Nickname: req.Nickname,
 		Avatar:   req.Avatar,
-		Email:    emailPtr,
+		Email:    req.Email,
 	}
 
 	// 调用数据库层更新用户资料
@@ -231,19 +215,11 @@ func (s *UserService) ListUsers(page, pageSize int) ([]*user.User, int64, error)
 			Id:        dbUser.ID,
 			Username:  dbUser.Username,
 			Nickname:  dbUser.Nickname,
-			Email:     "",
+			Email:     dbUser.Email,
 			Avatar:    dbUser.Avatar,
-			Status:    int32(dbUser.Status),
-			CreatedAt: dbUser.CreatedAt.Unix(),
-		}
-		if dbUser.Email != nil {
-			userInfo.Email = *dbUser.Email
-		}
-
-		// 更新时间，如果有的话
-		if !dbUser.UpdatedAt.IsZero() {
-			updatedAt := dbUser.UpdatedAt.Unix()
-			userInfo.UpdatedAt = updatedAt
+			Status:    dbUser.Status,
+			CreatedAt: dbUser.CreatedAt,
+			UpdatedAt: dbUser.UpdatedAt,
 		}
 
 		users = append(users, userInfo)

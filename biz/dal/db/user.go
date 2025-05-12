@@ -24,23 +24,19 @@ var (
 // TableName 用户表名常量
 const TableNameUser = "users"
 
-// User 用户模型定义
-// 包含用户基本信息及偏好设置
+// User 用户模型定义 - 与protobuf定义保持一致
+// 包含用户基本信息
 type User struct {
-	ID              int64          `gorm:"primaryKey;autoIncrement" json:"id"`                    // 用户唯一标识
-	Username        string         `gorm:"type:varchar(64);uniqueIndex;not null" json:"username"` // 用户名，唯一
-	Password        string         `gorm:"type:varchar(256);not null" json:"-"`                   // 密码，安全起见不返回给客户端
-	Nickname        string         `gorm:"type:varchar(64)" json:"nickname"`                      // 昵称
-	Email           *string        `gorm:"type:varchar(128);uniqueIndex" json:"email"`            // 邮箱
-	Avatar          string         `gorm:"type:varchar(256)" json:"avatar"`                       // 头像URL
-	BackgroundImage string         `gorm:"type:varchar(256)" json:"background_image"`             // 背景图片URL
-	Signature       string         `gorm:"type:varchar(512)" json:"signature"`                    // 个人签名
-	IsAdmin         bool           `gorm:"default:false" json:"is_admin"`                         // 是否管理员
-	Status          int8           `gorm:"default:1" json:"status"`                               // 状态：1-正常，2-禁用
-	LastLoginTime   *time.Time     `json:"last_login_time"`                                       // 最后登录时间
-	CreatedAt       time.Time      `json:"created_at"`                                            // 创建时间
-	UpdatedAt       time.Time      `json:"updated_at"`                                            // 更新时间
-	DeletedAt       gorm.DeletedAt `gorm:"index" json:"-"`                                        // 软删除时间
+	ID        int64          `gorm:"primaryKey;autoIncrement" json:"id,omitempty"`                    // 用户ID
+	Username  string         `gorm:"type:varchar(64);uniqueIndex;not null" json:"username,omitempty"` // 用户名
+	Password  string         `gorm:"type:varchar(256);not null" json:"-"`                           // 密码，安全起见不返回给客户端
+	Nickname  string         `gorm:"type:varchar(64)" json:"nickname,omitempty"`                    // 昵称
+	Avatar    string         `gorm:"type:varchar(256)" json:"avatar,omitempty"`                     // 头像URL
+	Email     string         `gorm:"type:varchar(128);uniqueIndex" json:"email,omitempty"`          // 电子邮箱
+	Status    int32          `gorm:"default:0" json:"status,omitempty"`                             // 用户状态：0-正常，1-禁用
+	CreatedAt int64          `gorm:"autoCreateTime:milli" json:"created_at,omitempty"`              // 创建时间（Unix时间戳）
+	UpdatedAt int64          `gorm:"autoUpdateTime:milli" json:"updated_at,omitempty"`              // 更新时间（Unix时间戳）
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`                                                // 软删除时间
 }
 
 // TableName 返回用户表名
@@ -166,8 +162,8 @@ func UpdateUserProfile(user *User) error {
 	result := DB.Model(&User{}).Where("id = ?", user.ID).Updates(map[string]interface{}{
 		"nickname":         user.Nickname,
 		"avatar":           user.Avatar,
-		"background_image": user.BackgroundImage,
-		"signature":        user.Signature,
+		"email":            user.Email,
+		"status":           user.Status,
 	})
 
 	if result.Error != nil {

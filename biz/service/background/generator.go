@@ -10,12 +10,12 @@ import (
 	model "novelai/biz/model/background"
 )
 
-// NovelOption 小说生成选项函数类型
+// NovelGeneratorOption 小说生成选项函数类型
 // 允许使用函数选项模式配置小说生成过程
-type NovelOption func(*NovelOptions) error
+type NovelGeneratorOption func(*NovelGeneratorOptions) error
 
-// NovelOptions 小说生成配置
-type NovelOptions struct {
+// NovelGeneratorOptions 小说生成配置
+type NovelGeneratorOptions struct {
 	// 世界观生成函数
 	WorldviewGenerator func(context.Context) ([]*model.Worldview, error)
 	// 规则生成函数，接收世界观作为参数
@@ -37,8 +37,8 @@ type NovelInfo struct {
 }
 
 // WithWorldviewGenerator 设置世界观生成函数
-func WithWorldviewGenerator(gen func(context.Context) ([]*model.Worldview, error)) NovelOption {
-	return func(opts *NovelOptions) error {
+func WithWorldviewGenerator(gen func(context.Context) ([]*model.Worldview, error)) NovelGeneratorOption {
+	return func(opts *NovelGeneratorOptions) error {
 		if gen == nil {
 			return errors.New("世界观生成函数不能为空")
 		}
@@ -48,8 +48,8 @@ func WithWorldviewGenerator(gen func(context.Context) ([]*model.Worldview, error
 }
 
 // WithRuleGenerator 设置规则生成函数
-func WithRuleGenerator(gen func(context.Context, []*model.Worldview) ([]*model.Rule, error)) NovelOption {
-	return func(opts *NovelOptions) error {
+func WithRuleGenerator(gen func(context.Context, []*model.Worldview) ([]*model.Rule, error)) NovelGeneratorOption {
+	return func(opts *NovelGeneratorOptions) error {
 		if gen == nil {
 			return errors.New("规则生成函数不能为空")
 		}
@@ -59,8 +59,8 @@ func WithRuleGenerator(gen func(context.Context, []*model.Worldview) ([]*model.R
 }
 
 // WithBackgroundGenerator 设置背景生成函数
-func WithBackgroundGenerator(gen func(context.Context, []*model.Worldview, []*model.Rule) ([]*model.BackgroundInfo, error)) NovelOption {
-	return func(opts *NovelOptions) error {
+func WithBackgroundGenerator(gen func(context.Context, []*model.Worldview, []*model.Rule) ([]*model.BackgroundInfo, error)) NovelGeneratorOption {
+	return func(opts *NovelGeneratorOptions) error {
 		if gen == nil {
 			return errors.New("背景生成函数不能为空")
 		}
@@ -70,8 +70,8 @@ func WithBackgroundGenerator(gen func(context.Context, []*model.Worldview, []*mo
 }
 
 // WithPostProcessor 设置小说后处理函数
-func WithPostProcessor(proc func(context.Context, *NovelInfo) error) NovelOption {
-	return func(opts *NovelOptions) error {
+func WithPostProcessor(proc func(context.Context, *NovelInfo) error) NovelGeneratorOption {
+	return func(opts *NovelGeneratorOptions) error {
 		if proc == nil {
 			return errors.New("后处理函数不能为空")
 		}
@@ -113,11 +113,11 @@ func defaultPostProcessor(ctx context.Context, novel *NovelInfo) error {
 }
 
 // defaultOptions 返回默认选项配置
-func defaultOptions() *NovelOptions {
+func defaultOptions() *NovelGeneratorOptions {
 	// 使用 Hertz 的日志系统记录警告
 	hlog.Warnf("正在使用默认小说生成选项，默认选项使用的生成函数会抛出错误，请使用 WithWorldviewGenerator、WithRuleGenerator 等函数设置自定义生成器")
 
-	return &NovelOptions{
+	return &NovelGeneratorOptions{
 		WorldviewGenerator:  defaultWorldviewGenerator,
 		RuleGenerator:       defaultRuleGenerator,
 		BackgroundGenerator: defaultBackgroundGenerator,
@@ -132,7 +132,7 @@ func defaultOptions() *NovelOptions {
 // 返回:
 // - 生成的小说结构体
 // - 如果生成过程出错，返回相应错误
-func generate(ctx context.Context, options ...NovelOption) (*NovelInfo, error) {
+func generate(ctx context.Context, options ...NovelGeneratorOption) (*NovelInfo, error) {
 	// 检查上下文是否有效
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
