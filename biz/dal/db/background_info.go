@@ -50,6 +50,7 @@ func (BackgroundInfo) TableName() string {
 // 参数:
 //   - ctx: 上下文
 //   - bi: 背景信息结构体指针
+//
 // 返回:
 //   - int64: 创建成功返回背景信息ID
 //   - error: 操作错误信息
@@ -68,6 +69,7 @@ func CreateBackgroundInfo(ctx context.Context, bi *BackgroundInfo) (int64, error
 // 参数:
 //   - ctx: 上下文
 //   - id: 背景信息ID
+//
 // 返回:
 //   - *BackgroundInfo: 背景信息
 //   - error: 操作错误信息
@@ -88,6 +90,7 @@ func GetBackgroundInfoByID(ctx context.Context, id int64) (*BackgroundInfo, erro
 //   - ctx: 上下文
 //   - id: 要更新的背景信息ID
 //   - updates: 包含更新字段的map
+//
 // 返回:
 //   - error: 操作错误信息
 func UpdateBackgroundInfo(ctx context.Context, id int64, updates map[string]interface{}) error {
@@ -113,6 +116,7 @@ func UpdateBackgroundInfo(ctx context.Context, id int64, updates map[string]inte
 // 参数:
 //   - ctx: 上下文
 //   - id: 背景信息ID
+//
 // 返回:
 //   - error: 操作错误信息
 func DeleteBackgroundInfo(ctx context.Context, id int64) error {
@@ -136,12 +140,13 @@ func DeleteBackgroundInfo(ctx context.Context, id int64) error {
 //   - parentIDFilter: 父背景ID筛选 (可选, 0表示顶级, -1或不传表示不筛选parent_id)
 //   - tagFilter: 标签筛选
 //   - page: 页码 (从1开始)
-//   - pageSize: 每页数量
+//   - pageSize: 每页数量 注意page和pageSize已改用int32，并且于函数中转换为int类型操作
+//
 // 返回:
 //   - []BackgroundInfo: 背景信息列表
 //   - int64: 总记录数
 //   - error: 操作错误信息
-func ListBackgroundInfos(ctx context.Context, worldviewIDFilter int64, parentIDFilter int64, tagFilter string, page, pageSize int) ([]BackgroundInfo, int64, error) {
+func ListBackgroundInfos(ctx context.Context, worldviewIDFilter int64, parentIDFilter int64, tagFilter string, page, pageSize int32) ([]BackgroundInfo, int64, error) {
 	var bis []BackgroundInfo
 	var total int64
 
@@ -169,7 +174,7 @@ func ListBackgroundInfos(ctx context.Context, worldviewIDFilter int64, parentIDF
 	}
 
 	offset := (page - 1) * pageSize
-	if err := dbQuery.Order("created_at DESC").Offset(offset).Limit(pageSize).Find(&bis).Error; err != nil {
+	if err := dbQuery.Order("created_at DESC").Offset(int(offset)).Limit(int(pageSize)).Find(&bis).Error; err != nil {
 		return nil, 0, errors.Join(ErrListBackgroundInfosFailed, err)
 	}
 

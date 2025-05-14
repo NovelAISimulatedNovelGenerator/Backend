@@ -9,6 +9,9 @@ Service层是NovelAI项目的核心业务逻辑层，位于Handler层和数据�
 ```
 /biz/service/
 ├── background/             # 背景服务业务逻辑
+│   ├── worldview_service.go # 世界观相关业务逻辑
+│   ├── rule_service.go     # 规则相关业务逻辑
+│   ├── background_info_service.go # 背景信息相关业务逻辑
 │   └── generate.go         # 小说背景生成逻辑
 ├── save/                   # 保存服务业务逻辑  
 │   └── save_service.go     # 保存相关业务逻辑
@@ -80,14 +83,70 @@ func Create(ctx context.Context, req *CreateSaveServiceRequest) (*CreateSaveServ
 }
 ```
 
-### 背景生成服务 (Background Service)
+### 背景服务 (Background Service)
 
-背景服务采用函数选项模式，负责生成小说世界观、规则和背景信息，包括：
+背景服务负责管理小说的世界观、规则和背景信息，包含多个组件：
 
-1. **世界观生成**: 创建小说的基础世界设定
-2. **规则生成**: 根据世界观创建相应的规则集
-3. **背景信息生成**: 根据世界观和规则创建详细的背景信息
-4. **自定义生成流程**: 通过选项函数自定义各个生成步骤
+#### 世界观服务 (WorldviewService)
+
+负责处理世界观相关的业务逻辑，包括：
+
+1. **创建世界观**: 保存新的世界观设定
+2. **获取世界观**: 根据 ID 查询世界观
+3. **更新世界观**: 修改现有世界观的名称、描述等
+4. **删除世界观**: 删除指定世界观
+5. **列出世界观**: 分页获取世界观列表
+
+代码示例：
+```go
+// CreateWorldview 创建新的世界观
+func (s *WorldviewService) CreateWorldview(req *background.CreateWorldviewRequest) (*background.Worldview, error) {
+    // 参数检查
+    // 生成世界观对象
+    // 调用数据访问层创建记录
+    // 返回创建的世界观
+}
+```
+
+#### 规则服务 (RuleService)
+
+负责处理世界观下的规则信息，包括：
+
+1. **创建规则**: 在特定世界观下创建新规则
+2. **获取规则**: 根据 ID 获取规则详情
+3. **更新规则**: 修改现有规则的内容和属性
+4. **删除规则**: 删除指定规则
+5. **列出规则**: 按世界观ID、父规则ID或标签查询规则
+
+代码示例：
+```go
+// CreateRule 创建新的规则
+func (s *RuleService) CreateRule(req *background.CreateRuleRequest) (*background.Rule, error) {
+    // 检查请求参数合法性
+    // 创建规则数据库对象
+    // 调用DAL层创建规则
+    // 返回创建的规则
+}
+```
+
+#### 背景信息服务 (BackgroundInfoService)
+
+负责管理详细的背景信息，包括：
+
+1. **创建背景信息**: 添加新的背景信息条目
+2. **获取背景信息**: 根据 ID 查询取背景信息
+3. **更新背景信息**: 修改现有背景信息
+4. **删除背景信息**: 删除指定背景信息
+5. **列出背景信息**: 按世界观ID或其他条件查询
+
+#### 生成服务 (Generate Service)
+
+采用函数选项模式，负责自动生成小说元素：
+
+1. **自动世界观生成**: 创建一致的小说世界观
+2. **自动规则生成**: 根据世界观生成适配的规则集
+3. **自动背景信息生成**: 生成丰富的背景细节
+4. **自定义生成选项**: 通过选项函数控制生成过程
 
 代码示例：
 ```go

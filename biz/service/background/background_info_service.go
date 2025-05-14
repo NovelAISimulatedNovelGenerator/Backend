@@ -10,7 +10,6 @@ import (
 	"novelai/biz/dal/db"
 	"novelai/biz/model/background"
 	"novelai/pkg/errno"
-	"novelai/pkg/utils"
 )
 
 // BackgroundInfoService 负责处理 BackgroundInfo 相关的业务逻辑
@@ -179,8 +178,8 @@ func (s *BackgroundInfoService) ListBackgroundInfos(req *background.ListBackgrou
 		return nil, 0, errno.InvalidParameterError("无效的请求参数")
 	}
 
-	page := utils.GetPage(req.Page)
-	pageSize := utils.GetPageSize(req.PageSize)
+	page := req.GetPage()
+	pageSize := req.GetPageSize()
 
 	// 直接传递来自请求的 ParentIdFilter。
 	// DAL 层约定: parentIDFilter = -1 表示不根据 parent_id 筛选。
