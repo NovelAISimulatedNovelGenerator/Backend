@@ -3,7 +3,7 @@ module novelai
 go 1.24.0
 
 require (
-	github.com/cloudwego/hertz v0.9.7
+	github.com/cloudwego/hertz v0.10.0
 	github.com/hertz-contrib/jwt v1.0.4
 	github.com/ollama/ollama v0.6.8
 	github.com/openai/openai-go v0.1.0-beta.10
@@ -14,7 +14,8 @@ require (
 )
 
 require (
-	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/cloudwego/gopkg v0.1.4 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/elastic/pkcs8 v1.0.0 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
@@ -37,11 +38,11 @@ require (
 )
 
 require (
-	github.com/bytedance/gopkg v0.1.0 // indirect
+	github.com/bytedance/gopkg v0.1.1 // indirect
 	github.com/bytedance/sonic v1.13.2 // indirect
 	github.com/bytedance/sonic/loader v0.2.4 // indirect
 	github.com/cloudwego/base64x v0.1.5 // indirect
-	github.com/cloudwego/netpoll v0.6.4 // indirect
+	github.com/cloudwego/netpoll v0.7.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
