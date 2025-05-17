@@ -15,20 +15,29 @@ import (
 	"novelai/pkg/errno"
 )
 
-// RuleService 用于管理规则相关的业务逻辑
+// RuleService 负责处理规则相关的业务逻辑
 type RuleService struct {
 	ctx context.Context     // 当前上下文
 	app *app.RequestContext // Hertz 的请求上下文
 	mu  sync.Mutex          // 互斥锁，用于保护并发操作
 }
 
-// NewRuleService 创建 RuleService 实例
-// 参数:
-//   - ctx: 上下文
-//   - appCtx: Hertz 请求上下文
+// NewRuleService 创建一个新的 RuleService 实例
 //
-// 返回:
-//   - *RuleService: RuleService 实例
+// 工作流程:
+// 1. 接收上下文和请求上下文参数
+// 2. 创建并返回 RuleService 实例，包含所需的上下文信息
+//
+// 参数:
+//   - ctx: 业务上下文，用于日志记录和数据库操作的上下文传递
+//   - appCtx: Hertz 框架的请求上下文，包含当前 HTTP 请求的相关信息
+//
+// 返回值:
+//   - *RuleService: 新创建的 RuleService 实例，可用于处理规则相关的业务逻辑
+//
+// 注意事项:
+//   - 该函数是工厂方法，每个请求都应创建新的 RuleService 实例
+//   - 返回的服务实例包含互斥锁，可以安全地在并发环境中使用
 func NewRuleService(ctx context.Context, appCtx *app.RequestContext) *RuleService {
 	return &RuleService{
 		ctx: ctx,
@@ -36,12 +45,22 @@ func NewRuleService(ctx context.Context, appCtx *app.RequestContext) *RuleServic
 	}
 }
 
-// convertDBRuleToModel 将 DAL 层 Rule 结构转换为 API 模型结构
-// 参数:
-//   - dbRule: 数据库规则结构指针
+// convertDBRuleToModel 将数据库模型转换为服务层模型
 //
-// 返回:
-//   - *background.Rule: 服务层规则结构
+// 工作流程:
+// 1. 检查输入的数据库模型指针是否为 nil
+// 2. 将数据库模型的字段映射到服务层模型的对应字段
+//
+// 参数:
+//   - dbRule: 数据库层的规则实体指针，包含从数据库获取的完整规则信息
+//
+// 返回值:
+//   - *background.Rule: 转换后的服务层规则实体，适用于 API 响应
+//   - 当输入为 nil 时返回 nil
+//
+// 注意事项:
+//   - 该函数是纯函数，不依赖服务实例的状态
+//   - 实现了 DAO 层和服务层之间的数据模型转换，解耦数据访问和业务逻辑
 func convertDBRuleToModel(dbRule *db.Rule) *background.Rule {
 	if dbRule == nil {
 		return nil
@@ -59,12 +78,32 @@ func convertDBRuleToModel(dbRule *db.Rule) *background.Rule {
 }
 
 // CreateRule 创建新的规则
-// 参数:
-//   - req: 创建规则的请求参数，包含名称、描述、标签、父ID等
 //
-// 返回:
-//   - *background.Rule: 创建成功后的规则信息
-//   - error: 操作错误信息
+// 工作流程:
+// 1. 验证请求参数的有效性，确保请求不为空且名称必填
+// 2. 验证所提供的世界观ID是否存在
+// 3. 如果提供了ParentId，验证父规则是否存在
+// 4. 验证父规则和当前规则是否属于同一世界观
+// 5. 创建数据库实体并调用数据访问层执行创建操作
+// 6. 返回创建成功的规则实体
+//
+// 参数:
+//   - req: 包含要创建的规则详细内容的请求对象
+//
+// 返回值:
+//   - *background.Rule: 新创建的规则对象，包含数据库分配的ID和时间戳
+//   - error: 操作过程中的错误，成功时返回nil
+//     - 当请求为空或缺失必要字段时返回InvalidParameterError
+//     - 当引用的世界观或父规则不存在时返回InvalidParameterError
+//     - 当父规则与当前规则不属于同一世界观时返回InvalidParameterError
+//     - 当数据库操作失败时返回DatabaseError
+//
+// 注意事项:
+//   - WorldviewId 字段是必填项，必须为正数
+//   - Name 字段是必填项，不能为空
+//   - ParentId 可以为0，表示没有父规则
+//   - 如果提供了ParentId，则ParentId对应的规则与新创建的规则必须属于同一世界观下
+//   - 创建成功后会返回完整的规则实体，包含数据库生成的ID和时间戳
 func (s *RuleService) CreateRule(req *background.CreateRuleRequest) (*background.Rule, error) {
 	if req == nil {
 		hlog.CtxWarnf(s.ctx, "CreateRule: 请求为空")
@@ -139,13 +178,27 @@ func (s *RuleService) CreateRule(req *background.CreateRuleRequest) (*background
 	return convertDBRuleToModel(dbRule), nil
 }
 
-// GetRuleByID 根据 ID 获取规则信息
-// 参数:
-//   - req: 获取规则的请求参数，包含规则 ID
+// GetRuleByID 通过ID获取单个规则
 //
-// 返回:
-//   - *background.Rule: 规则信息
-//   - error: 操作错误信息
+// 工作流程:
+// 1. 验证规则ID参数的有效性，确保是正数
+// 2. 调用数据访问层的 GetRuleByID 方法获取规则
+// 3. 处理可能出现的错误情况，包括记录不存在和数据库错误
+// 4. 将数据库实体转换为服务层模型并返回
+//
+// 参数:
+//   - req: 包含要查询的规则ID的请求对象
+//
+// 返回值:
+//   - *background.Rule: 返回找到的规则对象，如果没有找到则为 nil
+//   - error: 操作过程中的错误，成功时返回nil
+//     - 当ID无效时返回InvalidParameterError
+//     - 当记录不存在时返回NotFoundError
+//     - 当数据库操作失败时返回DatabaseError
+//
+// 注意事项:
+//   - 请求参数中的RuleId必须为正数
+//   - 当记录不存在时，返回的错误使用项目定义的errno.NotFoundError而非nil
 func (s *RuleService) GetRuleByID(req *background.GetRuleRequest) (*background.Rule, error) {
 	if req == nil || req.RuleId <= 0 {
 		hlog.CtxWarnf(s.ctx, "GetRuleByID: 无效的请求或规则ID: %v", req)
@@ -166,13 +219,35 @@ func (s *RuleService) GetRuleByID(req *background.GetRuleRequest) (*background.R
 	return convertDBRuleToModel(dbRule), nil
 }
 
-// UpdateRule 更新规则信息
-// 参数:
-//   - req: 更新规则的请求参数，包含规则 ID 及需要更新的字段
+// UpdateRule 更新现有的规则
 //
-// 返回:
-//   - *background.Rule: 更新后的规则信息
-//   - error: 操作错误信息
+// 工作流程:
+// 1. 验证请求参数的有效性，确保ID为正数
+// 2. 验证要更新的规则是否存在
+// 3. 如果更新世界观ID，验证新世界观是否存在
+// 4. 验证新父规则ID(如果有)是否存在，并属于同一世界观
+// 5. 构建需要更新的字段映射，仅包含请求中提供的字段
+// 6. 调用数据访问层更新规则信息
+// 7. 获取更新后的实体并返回
+//
+// 参数:
+//   - req: 包含规则ID和需要更新的字段的请求对象
+//
+// 返回值:
+//   - *background.Rule: 更新后的规则对象，包含最新的信息
+//   - error: 操作过程中的错误，成功时返回nil
+//     - 当请求为空或ID无效时返回InvalidParameterError
+//     - 当规则不存在时返回NotFoundError
+//     - 当引用的世界观或父规则不存在时返回InvalidParameterError
+//     - 当父规则与当前规则不属于同一世界观时返回InvalidParameterError
+//     - 当数据库操作失败时返回DatabaseError
+//
+// 注意事项:
+//   - 当没有任何字段需要更新时，会直接返回当前规则对象
+//   - Name, Description 仅在非空时才会更新
+//   - Tag 始终会被更新，包括更新为空字符串
+//   - ParentId 不等于-1时才会更新，允许更新为0(表示没有父规则)
+//   - 更新后会重新查询数据获取完整的更新后信息
 func (s *RuleService) UpdateRule(req *background.UpdateRuleRequest) (*background.Rule, error) {
 	if req == nil || req.Id <= 0 {
 		hlog.CtxWarnf(s.ctx, "UpdateRule: 无效的请求或规则ID: %v", req)
@@ -272,12 +347,26 @@ func (s *RuleService) UpdateRule(req *background.UpdateRuleRequest) (*background
 	return convertDBRuleToModel(dbRuleUpdated), nil
 }
 
-// DeleteRule 删除规则
+// DeleteRule 通过ID删除规则
+// 
+// 工作流程:
+// 1. 验证规则ID参数的有效性，确保是正数
+// 2. 调用数据访问层的 DeleteRule 方法删除规则
+// 3. 处理可能出现的错误情况，包括记录不存在和数据库错误
+// 
 // 参数:
-//   - req: 删除规则的请求参数，包含规则 ID
-//
-// 返回:
-//   - error: 操作错误信息
+//   - req: 包含要删除的规则ID的请求对象
+// 
+// 返回值:
+//   - error: 操作过程中的错误，成功时返回nil
+//     - 当ID无效时返回InvalidParameterError
+//     - 当记录不存在时返回NotFoundError
+//     - 当数据库操作失败时返回DatabaseError
+// 
+// 注意事项:
+//   - 请求参数中的RuleId必须为正数
+//   - 当应删除的记录不存在时，返回 NotFoundError 错误，而不是返回成功
+//   - 当前实现不检查该规则是否有子规则，删除可能会导致父子关系数据不一致
 func (s *RuleService) DeleteRule(req *background.DeleteRuleRequest) error {
 	if req == nil || req.RuleId <= 0 {
 		hlog.CtxWarnf(s.ctx, "DeleteRule: 无效的请求或规则ID: %v", req)
@@ -317,13 +406,29 @@ func (s *RuleService) DeleteRule(req *background.DeleteRuleRequest) error {
 }
 
 // ListRules 列出规则，支持分页和过滤
+// 
+// 工作流程:
+// 1. 验证请求参数的有效性，确保请求不为空
+// 2. 处理分页参数，使用请求中的page和pageSize或默认值
+// 3. 处理筛选参数，包括WorldviewId、IsEnabled和Name
+// 4. 调用数据访问层的ListRules方法获取列表和总数
+// 5. 将数据库实体列表转换为服务层模型列表
+// 6. 返回转换后的规则列表和总数
+// 
 // 参数:
-//   - req: 列出规则的请求参数，包含过滤条件和分页参数
-//
-// 返回:
-//   - []*background.Rule: 规则列表
-//   - int64: 总记录数
-//   - error: 操作错误信息
+//   - req: 包含查询参数的请求对象，支持分页和多种筛选条件
+// 
+// 返回值:
+//   - []*background.Rule: 规则列表，符合筛选条件和分页范围
+//   - int64: 符合筛选条件的记录总数，不受分页限制
+//   - error: 操作过程中的错误，成功时返回nil
+//     - 当请求为空时返回InvalidParameterError
+//     - 当数据库操作失败时返回相应错误
+// 
+// 注意事项:
+//   - 请求中的page和pageSize如果未设置或无效，会使用默认值
+//   - 当没有符合条件的记录时，返回空列表而非nil，总数为0，错误为nil
+//   - 世界观ID、是否启用和名称筛选可以组合使用，形成AND逻辑
 func (s *RuleService) ListRules(req *background.ListRulesRequest) ([]*background.Rule, int64, error) {
 	if req == nil {
 		err := errno.InvalidParameterError("请求不能为空")

@@ -5,9 +5,10 @@ import (
 	"errors"
 	"time"
 
+	model "novelai/biz/model/background"
+
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	model "novelai/biz/model/background"
 )
 
 // NovelGeneratorOption 小说生成选项函数类型
@@ -20,20 +21,20 @@ type NovelGeneratorOptions struct {
 	WorldviewGenerator func(context.Context) ([]*model.Worldview, error)
 	// 规则生成函数，接收世界观作为参数
 	RuleGenerator func(context.Context, []*model.Worldview) ([]*model.Rule, error)
-	// 背景生成函数，接收世界观和规则作为参数
-	BackgroundGenerator func(context.Context, []*model.Worldview, []*model.Rule) ([]*model.BackgroundInfo, error)
+	// 背景信息生成函数，接收世界观和规则作为参数
+	BackgroundInfoGenerator func(context.Context, []*model.Worldview, []*model.Rule) ([]*model.BackgroundInfo, error)
 	// 小说后处理函数，可以在生成完成后修改小说
 	PostProcessor func(context.Context, *NovelInfo) error
 }
 
 // NovelInfo 结构体，包含所有的世界观、规则和背景信息
 type NovelInfo struct {
-	ID          int64                      // 小说ID
-	WorldViews  []*model.Worldview         // 世界观列表
-	Rules       []*model.Rule              // 规则列表
-	Backgrounds []*model.BackgroundInfo    // 背景列表
-	CreatedAt   *timestamppb.Timestamp     // 创建时间
-	UpdatedAt   *timestamppb.Timestamp     // 更新时间
+	ID              int64                   // 小说ID
+	WorldViews      []*model.Worldview      // 世界观列表
+	Rules           []*model.Rule           // 规则列表
+	BackgroundInfos []*model.BackgroundInfo // 背景信息列表
+	CreatedAt       *timestamppb.Timestamp  // 创建时间
+	UpdatedAt       *timestamppb.Timestamp  // 更新时间
 }
 
 // WithWorldviewGenerator 设置世界观生成函数
@@ -58,13 +59,13 @@ func WithRuleGenerator(gen func(context.Context, []*model.Worldview) ([]*model.R
 	}
 }
 
-// WithBackgroundGenerator 设置背景生成函数
-func WithBackgroundGenerator(gen func(context.Context, []*model.Worldview, []*model.Rule) ([]*model.BackgroundInfo, error)) NovelGeneratorOption {
+// WithBackgroundInfoGenerator 设置背景信息生成函数
+func WithBackgroundInfoGenerator(gen func(context.Context, []*model.Worldview, []*model.Rule) ([]*model.BackgroundInfo, error)) NovelGeneratorOption {
 	return func(opts *NovelGeneratorOptions) error {
 		if gen == nil {
-			return errors.New("背景生成函数不能为空")
+			return errors.New("背景信息生成函数不能为空")
 		}
-		opts.BackgroundGenerator = gen
+		opts.BackgroundInfoGenerator = gen
 		return nil
 	}
 }
@@ -97,7 +98,7 @@ func defaultRuleGenerator(ctx context.Context, worldviews []*model.Worldview) ([
 }
 
 // defaultBackgroundGenerator 默认背景生成函数
-func defaultBackgroundGenerator(ctx context.Context, worldviews []*model.Worldview, rules []*model.Rule) ([]*model.BackgroundInfo, error) {
+func defaultBackgroundInfoGenerator(ctx context.Context, worldviews []*model.Worldview, rules []*model.Rule) ([]*model.BackgroundInfo, error) {
 	// 使用 Hertz 的日志系统记录警告
 	hlog.CtxWarnf(ctx, "正在使用默认背景生成器，该生成器仅返回错误，请提供自定义BackgroundGenerator")
 	// 返回错误，提示需要实现真实的生成逻辑
@@ -118,10 +119,10 @@ func defaultOptions() *NovelGeneratorOptions {
 	hlog.Warnf("正在使用默认小说生成选项，默认选项使用的生成函数会抛出错误，请使用 WithWorldviewGenerator、WithRuleGenerator 等函数设置自定义生成器")
 
 	return &NovelGeneratorOptions{
-		WorldviewGenerator:  defaultWorldviewGenerator,
-		RuleGenerator:       defaultRuleGenerator,
-		BackgroundGenerator: defaultBackgroundGenerator,
-		PostProcessor:       defaultPostProcessor,
+		WorldviewGenerator:      defaultWorldviewGenerator,
+		RuleGenerator:           defaultRuleGenerator,
+		BackgroundInfoGenerator: defaultBackgroundInfoGenerator,
+		PostProcessor:           defaultPostProcessor,
 	}
 }
 
@@ -169,11 +170,11 @@ func generate(ctx context.Context, options ...NovelGeneratorOption) (*NovelInfo,
 	novel.Rules = rules
 
 	// 生成背景
-	backgrounds, err := opts.BackgroundGenerator(ctx, worldviews, rules)
+	backgroundInfos, err := opts.BackgroundInfoGenerator(ctx, worldviews, rules)
 	if err != nil {
 		return nil, errors.New("生成背景失败: " + err.Error())
 	}
-	novel.Backgrounds = backgrounds
+	novel.BackgroundInfos = backgroundInfos
 
 	// 应用后处理
 	if err := opts.PostProcessor(ctx, novel); err != nil {

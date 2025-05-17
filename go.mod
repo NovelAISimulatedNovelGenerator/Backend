@@ -45,7 +45,7 @@ require (
 	github.com/cloudwego/netpoll v0.7.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	github.com/nyaruka/phonenumbers v1.0.55 // indirect
 	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.18.0 // indirect
@@ -53,7 +53,7 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
-	golang.org/x/arch v0.8.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/arch v0.17.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
 	gorm.io/gorm v1.25.12
 )
