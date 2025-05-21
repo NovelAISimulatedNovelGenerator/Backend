@@ -9,8 +9,8 @@ NovelAI 分层智能体系统采用"决策-执行"双层架构，通过清晰的
 │                     决策层 (Decision Layer)                    │
 │                                                               │
 │  ┌─────────────────┐    ┌─────────────────┐    ┌────────────┐ │
-│  │  策略Agent      │    │  规划Agent      │    │ 评估Agent  │ │
-│  │ (Strategy)      │◄───►│ (Planner)       │◄───►│(Evaluator) │ │
+│  │  策略Agent      │    │  规划Agent      │    │ 评估Agent   │ │
+│  │ (Strategy)      │◄───►│ (Planner)      │◄───►│(Evaluator) │ │
 │  └───────┬─────────┘    └────────┬────────┘    └─────┬──────┘ │
 └──────────┼──────────────────────┼────────────────────┼────────┘
            │                      │                    │
@@ -19,7 +19,7 @@ NovelAI 分层智能体系统采用"决策-执行"双层架构，通过清晰的
 │                    执行层 (Execution Layer)                   │
 │                                                              │
 │  ┌────────────────┐   ┌────────────────┐   ┌───────────────┐ │
-│  │  世界观Agent   │   │   角色Agent    │   │  剧情Agent    │ │
+│  │  世界观Agent   │   │   角色Agent     │   │  剧情Agent    │ │
 │  │  (Worldview)   │   │  (Character)   │   │   (Plot)      │ │
 │  └────────────────┘   └────────────────┘   └───────────────┘ │
 │                                                              │
@@ -33,10 +33,10 @@ NovelAI 分层智能体系统采用"决策-执行"双层架构，通过清晰的
 ┌──────────────────────────────────────────────────────────────┐
 │                     共享资源 (Shared Resources)               │
 │                                                              │
-│   ┌─────────────────┐    ┌─────────────────┐                 │
-│   │   记忆管理器    │    │    模型接口     │                 │
-│   │ (Memory Manager)│    │(Model Interface) │                 │
-│   └─────────────────┘    └─────────────────┘                 │
+│   ┌─────────────────┐    ┌─────────────────┐   ┌──────────┐  │
+│   │   记忆管理器     │    │    模型接口      │   │ 工具调用器│  │
+│   │ (Memory Manager)│    │(Model Interface)│   │(Tool Reg)│  │
+│   └─────────────────┘    └─────────────────┘   └──────────┘  │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -105,7 +105,12 @@ NovelAI 分层智能体系统采用"决策-执行"双层架构，通过清晰的
 #### 模型接口 (Model Interface)
 - **职责**：统一管理与底层LLM模型的交互
 - **功能**：提示词构建、模型调用、响应处理
-- **特点**：支持多种模型后端（Ollama、DeepSeek等）
+- **特点**：基于LangChain Go库，支持多种模型后端（Ollama、DeepSeek-api等）
+
+#### 工具调用系统 (Tool Calling System)
+- **职责**：提供智能体调用外部功能的能力
+- **功能**：工具注册、调用处理、结果返回
+- **特点**：基于LangChain Go库，支持自定义工具和第三方工具
 
 ## 3. 工作流程
 
@@ -169,19 +174,217 @@ NovelAI 分层智能体系统采用"决策-执行"双层架构，通过清晰的
 - 复用背景信息管理系统
 - 利用现有的规则生成功能
 
-## 5. 扩展性考虑
+## 5. 工具调用系统设计
 
-### 5.1 水平扩展
+### 5.1 系统概述
+
+工具调用系统为NovelAI多层代理架构提供了访问外部功能的能力，使智能体能够查询信息、执行操作并与用户或其他系统交互。该系统基于 LangChain Go 库（langchaingo）实现，充分利用其成熟的工具生态系统和扩展能力。
+
+### 5.2 核心组件
+
+#### 5.2.1 工具适配器 (Tool Adapter)
+
+工具适配器将 langchaingo 的工具接口与我们的代理系统无缝集成：
+
+```go
+// shared/tools/adapter.go
+
+package tools
+
+import (
+    "context"
+    
+    "github.com/tmc/langchaingo/tools"
+)
+
+// LangChainAdapter 将 langchaingo 工具适配到我们的系统
+// 实现了无缝集成第三方工具
+// 同时保持我们的系统设计不受影响
+// 这是适配器模式的典型应用
+```
+
+#### 5.2.2 工具注册表 (Tool Registry)
+
+工具注册表管理系统中所有可用的工具，实现集中式管理：
+
+```go
+// shared/tools/registry.go
+
+package tools
+
+import (
+    "github.com/tmc/langchaingo/tools"
+)
+
+// ToolRegistry 管理系统中所有可用的工具
+// 提供注册、获取和列举功能
+```
+
+#### 5.2.3 工具调用器 (Tool Caller)
+
+工具调用器负责执行工具调用请求：
+
+```go
+// shared/tools/caller.go
+
+package tools
+
+import (
+    "context"
+    
+    "github.com/tmc/langchaingo/tools"
+)
+
+// ToolCaller 处理工具调用请求
+// 负责解析请求、调用相应工具并返回结果
+```
+
+### 5.3 预定义工具
+
+系统提供以下预定义工具，用于小说生成场景：
+
+#### 5.3.1 世界观工具 (Worldview Tools)
+
+```go
+// shared/tools/worldtools/worldview.go
+
+package worldtools
+
+import (
+    "context"
+    "encoding/json"
+    
+    "github.com/tmc/langchaingo/tools"
+)
+
+// WorldviewSearchTool 实现世界观搜索功能
+// 允许智能体查询现有世界观
+
+// WorldviewCreateTool 实现世界观创建功能
+// 允许智能体创建新的世界观设定
+```
+
+#### 5.3.2 角色工具 (Character Tools)
+
+```go
+// shared/tools/worldtools/character.go
+
+package worldtools
+
+import (
+    "context"
+    "encoding/json"
+    
+    "github.com/tmc/langchaingo/tools"
+)
+
+// CharacterSearchTool 实现角色搜索功能
+// 允许智能体查询现有角色
+
+// CharacterCreateTool 实现角色创建功能
+// 允许智能体创建新的角色
+```
+
+#### 5.3.3 剧情工具 (Plot Tools)
+
+```go
+// shared/tools/worldtools/plot.go
+
+package worldtools
+
+import (
+    "context"
+    "encoding/json"
+    
+    "github.com/tmc/langchaingo/tools"
+)
+
+// PlotGeneratorTool 实现剧情生成功能
+// 基于世界观和角色生成剧情框架
+
+// PlotAnalysisTool 实现剧情分析功能
+// 分析现有剧情的结构和元素
+```
+
+### 5.4 与Agent集成
+
+通过扩展 Agent 接口，使智能体能够使用工具调用功能：
+
+```go
+// core/agent.go
+
+package core
+
+import (
+    "context"
+    
+    "github.com/yourusername/novelai/pkg/experimental/multilayer_agent/shared/tools"
+)
+
+// Agent 定义所有智能体必须实现的基本接口
+// 增加了工具调用相关方法
+```
+
+### 5.5 工具调用流程
+
+1. 智能体生成包含工具调用请求的消息
+2. 编排器识别工具调用消息并路由到工具调用器
+3. 工具调用器执行工具调用并返回结果
+4. 编排器将结果路由回原始智能体
+5. 智能体处理工具调用结果并生成响应
+
+### 5.6 集成示例
+
+下面是一个集成示例，展示如何在规划智能体中使用工具调用功能：
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    
+    "github.com/tmc/langchaingo/llms"
+    "github.com/tmc/langchaingo/tools"
+    
+    "github.com/yourusername/novelai/pkg/experimental/multilayer_agent/core"
+    "github.com/yourusername/novelai/pkg/experimental/multilayer_agent/decision"
+    "github.com/yourusername/novelai/pkg/experimental/multilayer_agent/shared/model"
+    customtools "github.com/yourusername/novelai/pkg/experimental/multilayer_agent/shared/tools"
+    "github.com/yourusername/novelai/pkg/experimental/multilayer_agent/shared/tools/worldtools"
+)
+
+func main() {
+    // 注册工具
+    registry := customtools.NewToolRegistry()
+    worldviewSearchTool := worldtools.NewWorldviewSearchTool()
+    registry.RegisterTool(worldviewSearchTool)
+    
+    // 创建工具调用器
+    toolCaller := customtools.NewToolCaller(registry)
+    
+    // 创建规划智能体
+    plannerAgent := decision.NewPlannerAgent(model.NewOllamaModel("http://localhost:11434"))
+    plannerAgent.SetToolCaller(toolCaller)
+    
+    // 使用智能体
+    // ...
+}
+```
+
+## 6. 扩展性考虑
+
+### 6.1 水平扩展
 
 - **新智能体类型**：可通过实现Agent接口添加新的专业智能体
 - **调整层次结构**：可根据需要调整决策层和执行层的职责划分
 
-### 5.2 垂直扩展
+### 6.2 垂直扩展
 
 - **模型替换**：支持更换底层生成模型
 - **算法优化**：可优化各智能体内部算法
 
-## 6. 预期优势
+## 7. 预期优势
 
 1. **专业分工**：各智能体专注于特定任务，提高生成质量
 2. **决策与执行分离**：高层决策与具体执行解耦，便于控制和调整
@@ -189,13 +392,16 @@ NovelAI 分层智能体系统采用"决策-执行"双层架构，通过清晰的
 4. **可扩展性**：模块化设计便于功能扩展和系统演进
 5. **可维护性**：清晰的责任边界便于调试和改进
 
-## 7. 后续工作
+## 8. 后续工作
 
 1. **智能体能力优化**：提升各专业智能体的生成能力
 2. **记忆管理高级功能**：实现更复杂的记忆关联和检索
 3. **评估机制完善**：开发更全面的质量评估标准
 4. **用户交互优化**：提供更灵活的用户干预机制
+5. **工具调用能力扩展**：增强工具生态系统，支持更多带有智能体业务逻辑的复杂工具
 
-## 8. 结语
+## 9. 结语
 
 本设计采用分层架构将小说生成过程分解为决策和执行两个主要层次，通过专业智能体协同工作提高生成内容的质量和一致性。系统具有良好的可扩展性和可维护性，能够有效集成到现有的NovelAI项目中。
+
+通过集成 LangChain Go 库，系统获得了强大的工具调用能力，使智能体能够与外部系统交互，获取信息并执行操作。这种集成方式不仅保持了系统的灵活性和可扩展性，还能使用行业标准工具库，减少开发成本并提高代码质量。
