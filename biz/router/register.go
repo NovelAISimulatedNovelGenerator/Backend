@@ -5,7 +5,6 @@ package router
 import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 
-	background "novelai/biz/router/background"
 	"novelai/biz/router/save"
 	"novelai/biz/router/user"
 )
@@ -15,6 +14,5 @@ func GeneratedRegister(r *server.Hertz) {
 	user.RegisterRoutes(r)
 	save.RegisterRoutes(r)
 	//INSERT_POINT: DO NOT DELETE THIS LINE!
-	background.Register(r)
 
 }
