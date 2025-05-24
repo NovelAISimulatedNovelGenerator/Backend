@@ -203,12 +203,24 @@ func runModelTest(ctx context.Context, testModel model.Model) {
 
 // runToolTest 测试工具调用
 func runToolTest(ctx context.Context, registry *agenttools.ToolRegistry) {
-	// 获取示例工具
-	exampleTool, err := registry.GetTool("example_tool")
+	// 创建示例工具
+	exampleTool := createExampleTool()
+	
+	// 注册示例工具到注册表
+	err := registry.RegisterTool(exampleTool)
+	if err != nil {
+		hlog.Errorf("注册示例工具失败: %v", err)
+		return
+	}
+	hlog.Infof("成功注册工具: %s", exampleTool.Name())
+
+	// 从注册表获取示例工具（验证注册是否成功）
+	retrievedTool, err := registry.GetTool("example_tool")
 	if err != nil {
 		hlog.Errorf("获取示例工具失败: %v", err)
 		return
 	}
+	hlog.Infof("成功获取工具: %s - %s", retrievedTool.Name(), retrievedTool.Description())
 
 	// 准备测试输入
 	testInput := `{
@@ -223,11 +235,12 @@ func runToolTest(ctx context.Context, registry *agenttools.ToolRegistry) {
 	}`
 
 	// 调用工具
-	hlog.Infof("调用工具: %s", exampleTool.Name())
+	hlog.Infof("调用工具: %s", retrievedTool.Name())
 	hlog.Infof("工具输入: %s", testInput)
 
+	// 直接工具调用测试
 	start := time.Now()
-	result, err := exampleTool.Call(ctx, testInput)
+	result, err := retrievedTool.Call(ctx, testInput)
 	if err != nil {
 		hlog.Errorf("工具调用失败: %v", err)
 		return
@@ -236,6 +249,38 @@ func runToolTest(ctx context.Context, registry *agenttools.ToolRegistry) {
 	elapsed := time.Since(start)
 	hlog.Infof("工具调用耗时: %v", elapsed)
 	hlog.Infof("工具调用结果: %s", result)
+
+	// 测试通过ToolCaller接口调用工具
+	hlog.Infof("\n----- 测试ToolCaller接口 -----")
+	
+	// 创建简单ToolCaller实现
+	toolCaller := NewSimpleToolCaller(registry)
+	
+	// 获取可用工具列表
+	availableTools := toolCaller.GetAvailableTools()
+	hlog.Infof("可用工具数量: %d", len(availableTools))
+	
+	for i, tool := range availableTools {
+		hlog.Infof("工具 %d: %s - %s", i+1, tool.Name(), tool.Description())
+	}
+	
+	// 通过ToolCaller调用工具
+	start = time.Now()
+	toolResult, err := toolCaller.Call(ctx, "example_tool", testInput)
+	if err != nil {
+		hlog.Errorf("通过ToolCaller调用工具失败: %v", err)
+		return
+	}
+	
+	elapsed = time.Since(start)
+	hlog.Infof("ToolCaller调用耗时: %v", elapsed)
+	hlog.Infof("ToolCaller调用结果: %s", toolResult)
+	
+	// 测试调用不存在的工具
+	_, err = toolCaller.Call(ctx, "non_existent_tool", "{}")
+	if err != nil {
+		hlog.Infof("预期的错误 - 调用不存在的工具: %v", err)
+	}
 
 	// 测试使用工具调用适配器
 	hlog.Infof("测试工具调用适配器")
@@ -413,6 +458,54 @@ func testSingleAgent(ctx context.Context, testModel model.Model) {
 }
 
 // testOrchestrator 测试编排器功能
+// SimpleToolCaller 实现了core.ToolCaller接口的简单工具调用器
+type SimpleToolCaller struct {
+	// 工具注册表引用
+	registry *agenttools.ToolRegistry
+}
+
+// NewSimpleToolCaller 创建一个简单工具调用器
+// 参数:
+//   - registry: 工具注册表实例
+// 返回:
+//   - core.ToolCaller: 实现了ToolCaller接口的实例
+func NewSimpleToolCaller(registry *agenttools.ToolRegistry) core.ToolCaller {
+	return &SimpleToolCaller{
+		registry: registry,
+	}
+}
+
+// Call 实现core.ToolCaller接口的工具调用方法
+// 参数:
+//   - ctx: 上下文
+//   - toolName: 要调用的工具名称
+//   - input: 工具输入参数
+// 返回:
+//   - string: 工具执行结果
+//   - error: 可能的错误
+func (c *SimpleToolCaller) Call(ctx context.Context, toolName string, input string) (string, error) {
+	// 从注册表中获取工具
+	tool, err := c.registry.GetTool(toolName)
+	if err != nil {
+		return "", fmt.Errorf("获取工具失败: %w", err)
+	}
+	
+	// 调用工具
+	result, err := tool.Call(ctx, input)
+	if err != nil {
+		return "", fmt.Errorf("工具调用失败: %w", err)
+	}
+	
+	return result, nil
+}
+
+// GetAvailableTools 实现core.ToolCaller接口的获取可用工具方法
+// 返回:
+//   - []tools.Tool: 所有可用工具的列表
+func (c *SimpleToolCaller) GetAvailableTools() []tools.Tool {
+	return c.registry.ListTools()
+}
+
 func testOrchestrator(ctx context.Context, testModel model.Model, registry *agenttools.ToolRegistry) {
 	// 1. 创建编排器
 	hlog.Infof("创建编排器")
