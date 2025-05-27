@@ -41,6 +41,8 @@ type Orchestrator struct {
 	agents       map[string]Agent       // 注册的智能体
 	agentMutex   sync.RWMutex           // 智能体映射的读写锁
 	messageQueue chan *MessageEnvelope  // 消息队列
+	queueClosed  bool                   // 消息队列是否已关闭
+	queueMutex   sync.Mutex             // 队列关闭状态的互斥锁
 	routingTable map[AgentType][]string // 路由表：智能体类型到ID的映射
 	routingMutex sync.RWMutex           // 路由表的读写锁
 	ctx          context.Context        // 上下文
@@ -76,6 +78,7 @@ func NewOrchestrator(config *OrchestratorConfig) *Orchestrator {
 		config:       config,
 		agents:       make(map[string]Agent),
 		messageQueue: make(chan *MessageEnvelope, config.MessageQueueSize),
+		queueClosed:  false, // 初始化为未关闭状态
 		routingTable: make(map[AgentType][]string),
 		ctx:          ctx,
 		cancel:       cancel,
@@ -198,20 +201,27 @@ func (o *Orchestrator) Start() error {
 }
 
 // Stop 停止编排器
+// 该方法会停止所有消息处理，并关闭消息队列
+// 返回可能的错误，如编排器已经停止等
 func (o *Orchestrator) Stop() error {
 	o.runningMutex.Lock()
+	defer o.runningMutex.Unlock()
+
 	if !o.running {
-		o.runningMutex.Unlock()
 		return errors.New("编排器未在运行")
 	}
 	o.running = false
-	o.runningMutex.Unlock()
 
 	// 发送取消信号
 	o.cancel()
 
-	// 关闭消息队列
-	close(o.messageQueue)
+	// 关闭消息队列 - 使用关闭标志防止重复关闭
+	o.queueMutex.Lock()
+	if !o.queueClosed {
+		close(o.messageQueue)
+		o.queueClosed = true
+	}
+	o.queueMutex.Unlock()
 
 	// 等待所有工作协程结束
 	o.wg.Wait()

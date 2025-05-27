@@ -128,13 +128,21 @@ func (a *GenericAdvancedAgent) Process(ctx context.Context, msg *Message) (*Mess
 	var modelResponse string
 	var err error
 
-	if a.GetModel().SupportsJSON() {
-		// 使用JSON模式
+	// 对于格式化智能体，强制使用文本模式，而不是JSON模式
+	if a.GetModel().SupportsJSON() && a.GetType() != AgentTypeFormatter {
+		// 使用JSON模式，但对于格式化智能体不强制要求JSON格式
 		messages := []llms.MessageContent{
 			{
 				Role: "system",
 				Parts: []llms.ContentPart{
-					llms.TextPart(fmt.Sprintf("你是一个智能体，类型为%s。请以JSON格式回复。", a.GetType())),
+					llms.TextPart(func() string {
+						base := fmt.Sprintf("你是一个智能体，类型为%s。", a.GetType())
+						// 格式化智能体不强制要求JSON格式
+						if a.GetType() != AgentTypeFormatter {
+							return base + "请以JSON格式回复。"
+						}
+						return base
+					}()),
 				},
 			},
 			{

@@ -13,10 +13,10 @@ import (
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/tools"
 
-	"novelai/pkg/experimental/multilayer_agent/core"
 	"novelai/pkg/experimental/multilayer_agent/shared/model"
 	agenttools "novelai/pkg/experimental/multilayer_agent/shared/tools"
 	"novelai/pkg/experimental/multilayer_agent/shared/tools/example_tool"
+	"novelai/pkg/experimental/multilayer_agent/test"
 )
 
 // 测试配置结构
@@ -33,6 +33,7 @@ type TestConfig struct {
 	RunModelTest       bool `json:"run_model_test"`
 	RunToolTest        bool `json:"run_tool_test"`
 	RunIntegrationTest bool `json:"run_integration_test"`
+	RunMultiAgentTest  bool `json:"run_multi_agent_test"`
 }
 
 // 默认测试配置
@@ -40,9 +41,10 @@ var defaultConfig = TestConfig{
 	ModelType:          model.ModelTypeOllama,
 	ModelName:          "llama2",
 	Debug:              true,
-	RunModelTest:       true,
-	RunToolTest:        true,
-	RunIntegrationTest: true,
+	RunModelTest:       false,
+	RunToolTest:        false,
+	RunIntegrationTest: false,
+	RunMultiAgentTest:  true,
 }
 
 func main() {
@@ -85,9 +87,11 @@ func main() {
 		runIntegrationTest(ctx, testModel, registry)
 	}
 
-	// 新增：运行多层智能体系统测试
-	hlog.Infof("\n===== 开始多层智能体系统测试 =====")
-	runMultiAgentSystemTest(ctx, testModel, registry)
+	// 运行多层智能体系统测试
+	if config.RunMultiAgentTest {
+		hlog.Infof("\n===== 开始多层智能体系统测试 =====")
+		runMultiAgentSystemTest(ctx, testModel, registry)
+	}
 
 	hlog.Infof("多层代理系统测试完成")
 }
@@ -205,7 +209,7 @@ func runModelTest(ctx context.Context, testModel model.Model) {
 func runToolTest(ctx context.Context, registry *agenttools.ToolRegistry) {
 	// 创建示例工具
 	exampleTool := createExampleTool()
-	
+
 	// 注册示例工具到注册表
 	err := registry.RegisterTool(exampleTool)
 	if err != nil {
@@ -252,34 +256,46 @@ func runToolTest(ctx context.Context, registry *agenttools.ToolRegistry) {
 
 	// 测试通过ToolCaller接口调用工具
 	hlog.Infof("\n----- 测试ToolCaller接口 -----")
-	
-	// 创建简单ToolCaller实现
-	toolCaller := NewSimpleToolCaller(registry)
-	
+
+	// 创建工具调用器
+	toolCaller := agenttools.NewToolCaller(registry)
+
 	// 获取可用工具列表
-	availableTools := toolCaller.GetAvailableTools()
+	availableTools := registry.ListTools()
 	hlog.Infof("可用工具数量: %d", len(availableTools))
-	
+
 	for i, tool := range availableTools {
 		hlog.Infof("工具 %d: %s - %s", i+1, tool.Name(), tool.Description())
 	}
-	
+
 	// 通过ToolCaller调用工具
 	start = time.Now()
-	toolResult, err := toolCaller.Call(ctx, "example_tool", testInput)
+
+	// 创建工具请求
+	req := agenttools.ToolRequest{
+		ToolName: "example_tool",
+		Input:    json.RawMessage(testInput),
+	}
+
+	resp, err := toolCaller.CallTool(ctx, req)
 	if err != nil {
 		hlog.Errorf("通过ToolCaller调用工具失败: %v", err)
 		return
 	}
-	
+
 	elapsed = time.Since(start)
 	hlog.Infof("ToolCaller调用耗时: %v", elapsed)
-	hlog.Infof("ToolCaller调用结果: %s", toolResult)
-	
+	hlog.Infof("ToolCaller调用结果: %s", resp.Result)
+
 	// 测试调用不存在的工具
-	_, err = toolCaller.Call(ctx, "non_existent_tool", "{}")
-	if err != nil {
-		hlog.Infof("预期的错误 - 调用不存在的工具: %v", err)
+	invalidReq := agenttools.ToolRequest{
+		ToolName: "non_existent_tool",
+		Input:    json.RawMessage("{}"),
+	}
+
+	invalidResp, _ := toolCaller.CallTool(ctx, invalidReq)
+	if !invalidResp.Success {
+		hlog.Infof("预期的错误 - 调用不存在的工具: %s", invalidResp.Error)
 	}
 
 	// 测试使用工具调用适配器
@@ -287,23 +303,23 @@ func runToolTest(ctx context.Context, registry *agenttools.ToolRegistry) {
 	caller := agenttools.NewToolCaller(registry)
 
 	// 使用工具名称和参数调用
-	req := agenttools.ToolRequest{
+	adapterReq := agenttools.ToolRequest{
 		ToolName: "example_tool",
 		Input:    json.RawMessage(testInput),
 	}
-	resp, err := caller.CallTool(ctx, req)
+	adapterResp, err := caller.CallTool(ctx, adapterReq)
 	if err != nil {
 		hlog.Errorf("通过适配器调用工具失败: %v", err)
 		return
 	}
 
 	// 检查调用是否成功
-	if !resp.Success {
-		hlog.Errorf("工具调用失败: %s", resp.Error)
+	if !adapterResp.Success {
+		hlog.Errorf("工具调用失败: %s", adapterResp.Error)
 		return
 	}
 
-	result = resp.Result
+	result = adapterResp.Result
 
 	hlog.Infof("适配器调用结果: %s", result)
 }
@@ -397,220 +413,9 @@ func runIntegrationTest(ctx context.Context, testModel model.Model, registry *ag
 // runMultiAgentSystemTest 测试多层智能体系统功能
 func runMultiAgentSystemTest(ctx context.Context, testModel model.Model, registry *agenttools.ToolRegistry) {
 	hlog.Infof("多层智能体系统测试开始...")
-	
-	// 测试分为两部分：
-	// 1. 测试单个智能体的能力
-	// 2. 测试编排器及多智能体协作
-	
-	// 第一部分：测试单个智能体
-	hlog.Infof("=== 测试单个智能体 ===")
-	testSingleAgent(ctx, testModel)
-	
-	// 第二部分：测试编排器
-	hlog.Infof("=== 测试编排器 ===")
-	testOrchestrator(ctx, testModel, registry)
-	
+
+	// 使用测试目录中的测试框架运行完整测试套件
+	test.RunMultiAgentSystemTests(ctx, testModel, registry)
+
 	hlog.Infof("多层智能体系统测试完成")
-}
-
-// testSingleAgent 测试单个智能体的能力
-func testSingleAgent(ctx context.Context, testModel model.Model) {
-	// 1. 创建测试智能体
-	hlog.Infof("创建测试智能体")
-	testAgent := core.NewGenericAdvancedAgent(
-		"test_agent", 
-		core.AgentTypeWorldview, 
-		"你是一个测试智能体，可以调用工具并生成响应。",
-	)
-	
-	// 2. 设置模型
-	hlog.Infof("为智能体设置模型")
-	testAgent.SetModel(testModel)
-	
-	// 3. 初始化智能体
-	hlog.Infof("初始化智能体")
-	err := testAgent.Initialize(ctx)
-	if err != nil {
-		hlog.Errorf("初始化智能体失败: %v", err)
-		return
-	}
-	
-	// 4. 测试智能体处理消息的能力
-	hlog.Infof("测试智能体处理消息能力")
-	testMsg := core.NewMessage(core.MessageTypeRequest, "user", "test_agent")
-	testMsg.Subject = "测试智能体处理能力"
-	testMsg.Content = "请生成一个奇幻世界的基本设定。"
-	
-	// 5. 直接调用智能体的Process方法
-	hlog.Infof("发送消息到智能体: %s", testMsg.Subject)
-	responseMsg, err := testAgent.Process(ctx, testMsg)
-	if err != nil {
-		hlog.Errorf("处理消息失败: %v", err)
-	} else {
-		hlog.Infof("收到响应: %s", responseMsg.Subject)
-		hlog.Infof("响应内容: %s", responseMsg.Content)
-		hlog.Infof("元数据: %v", responseMsg.Metadata)
-	}
-	
-	// 6. 关闭智能体
-	hlog.Infof("关闭智能体")
-	testAgent.Shutdown(ctx)
-}
-
-// testOrchestrator 测试编排器功能
-// SimpleToolCaller 实现了core.ToolCaller接口的简单工具调用器
-type SimpleToolCaller struct {
-	// 工具注册表引用
-	registry *agenttools.ToolRegistry
-}
-
-// NewSimpleToolCaller 创建一个简单工具调用器
-// 参数:
-//   - registry: 工具注册表实例
-// 返回:
-//   - core.ToolCaller: 实现了ToolCaller接口的实例
-func NewSimpleToolCaller(registry *agenttools.ToolRegistry) core.ToolCaller {
-	return &SimpleToolCaller{
-		registry: registry,
-	}
-}
-
-// Call 实现core.ToolCaller接口的工具调用方法
-// 参数:
-//   - ctx: 上下文
-//   - toolName: 要调用的工具名称
-//   - input: 工具输入参数
-// 返回:
-//   - string: 工具执行结果
-//   - error: 可能的错误
-func (c *SimpleToolCaller) Call(ctx context.Context, toolName string, input string) (string, error) {
-	// 从注册表中获取工具
-	tool, err := c.registry.GetTool(toolName)
-	if err != nil {
-		return "", fmt.Errorf("获取工具失败: %w", err)
-	}
-	
-	// 调用工具
-	result, err := tool.Call(ctx, input)
-	if err != nil {
-		return "", fmt.Errorf("工具调用失败: %w", err)
-	}
-	
-	return result, nil
-}
-
-// GetAvailableTools 实现core.ToolCaller接口的获取可用工具方法
-// 返回:
-//   - []tools.Tool: 所有可用工具的列表
-func (c *SimpleToolCaller) GetAvailableTools() []tools.Tool {
-	return c.registry.ListTools()
-}
-
-func testOrchestrator(ctx context.Context, testModel model.Model, registry *agenttools.ToolRegistry) {
-	// 1. 创建编排器
-	hlog.Infof("创建编排器")
-	orchConfig := core.DefaultOrchestratorConfig()
-	orchestrator := core.NewOrchestrator(orchConfig)
-	
-	// 2. 创建多个不同类型的智能体
-	hlog.Infof("创建多个不同类型的智能体")
-	
-	// 创建世界观智能体
-	worldviewAgent := core.NewGenericAdvancedAgent(
-		"worldview_agent", 
-		core.AgentTypeWorldview, 
-		"你是世界观智能体，负责生成世界设定。",
-	)
-	worldviewAgent.SetModel(testModel)
-	
-	// 创建角色智能体
-	characterAgent := core.NewGenericAdvancedAgent(
-		"character_agent", 
-		core.AgentTypeCharacter, 
-		"你是角色智能体，负责生成角色信息。",
-	)
-	characterAgent.SetModel(testModel)
-	
-	// 3. 注册智能体到编排器
-	hlog.Infof("注册智能体到编排器")
-	err := orchestrator.RegisterAgent(worldviewAgent)
-	if err != nil {
-		hlog.Errorf("注册世界观智能体失败: %v", err)
-		return
-	}
-	
-	err = orchestrator.RegisterAgent(characterAgent)
-	if err != nil {
-		hlog.Errorf("注册角色智能体失败: %v", err)
-		return
-	}
-	
-	// 4. 测试获取智能体
-	hlog.Infof("测试获取智能体")
-	
-	// 根据ID获取智能体
-	agent, exists := orchestrator.GetAgent("worldview_agent")
-	if exists {
-		hlog.Infof("根据ID找到智能体: %s, 类型: %s", agent.GetID(), agent.GetType())
-	} else {
-		hlog.Errorf("根据ID找不到智能体")
-	}
-	
-	// 根据类型获取智能体
-	agents := orchestrator.GetAgentsByType(core.AgentTypeCharacter)
-	hlog.Infof("找到 %d 个角色类型智能体", len(agents))
-	
-	// 5. 启动编排器
-	hlog.Infof("启动编排器")
-	err = orchestrator.Start()
-	if err != nil {
-		hlog.Errorf("启动编排器失败: %v", err)
-		return
-	}
-	
-	// 6. 发送消息并测试编排器消息路由
-	hlog.Infof("发送消息到编排器")
-	
-	// 创建消息
-	msg := core.NewMessage(core.MessageTypeRequest, "user", "worldview_agent")
-	msg.Subject = "请创建一个奇幻世界设定"
-	msg.Content = "请描述一个充满魔法的奇幻世界的基本设定。"
-	
-	// 发送消息
-	hlog.Infof("发送消息: %s", msg.Subject)
-	response, err := orchestrator.SendMessage(ctx, msg)
-	if err != nil {
-		hlog.Errorf("发送消息失败: %v", err)
-	} else {
-		hlog.Infof("收到响应: %s", response.Subject)
-		hlog.Infof("响应内容: %s", response.Content)
-	}
-	
-	// 7. 测试广播消息
-	hlog.Infof("测试广播消息")
-	broadcastMsg := core.NewMessage(core.MessageTypeNotification, "user", "")
-	broadcastMsg.Subject = "系统通知"
-	broadcastMsg.Content = "所有智能体注意，这是一条系统通知。"
-	
-	// 广播给所有的智能体
-	responses, err := orchestrator.BroadcastMessage(ctx, core.AgentTypeWorldview, broadcastMsg)
-	if err != nil {
-		hlog.Errorf("广播消息失败: %v", err)
-	} else {
-		hlog.Infof("收到 %d 个响应", len(responses))
-		for i, resp := range responses {
-			hlog.Infof("响应 %d: %s", i+1, resp.Subject)
-		}
-	}
-	
-	// 8. 获取编排器状态
-	status := orchestrator.GetStatus()
-	hlog.Infof("编排器状态: %v", status)
-	
-	// 9. 停止编排器
-	hlog.Infof("停止编排器")
-	err = orchestrator.Stop()
-	if err != nil {
-		hlog.Errorf("停止编排器失败: %v", err)
-	}
 }
