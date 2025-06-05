@@ -243,6 +243,9 @@ func RunTests(ctx context.Context, testModel model.Model, registry *agenttools.T
 	suite.AddTestCase(NewAgentStateManagementTest())
 	suite.AddTestCase(NewAgentToolUsageTest())
 	
+	// 添加策略智能体测试
+	RegisterStrategyTests(suite)
+	
 	// 添加组件测试
 	suite.AddTestCase(NewOrchestratorLifecycleTest())
 	suite.AddTestCase(NewOrchestratorAgentRegistryTest())

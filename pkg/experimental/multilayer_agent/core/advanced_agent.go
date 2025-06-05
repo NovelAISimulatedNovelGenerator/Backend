@@ -42,7 +42,7 @@ func (a *GenericAdvancedAgent) Initialize(ctx context.Context) error {
 
 	// 加载之前的状态（如果有）
 	if a.GetMemoryManager() != nil {
-		stateKey := memory.CreateTaggedKey(a.GetID(), "state", "last_process_time")
+		stateKey := memory.CreateTaggedKey(a.GetID(), memory.MemoryCategoryState, memory.StateKeyLastProcessTime)
 		if val, err := a.LoadMemory(ctx, stateKey); err == nil && val != nil {
 			if timeStr, ok := val.(string); ok {
 				if parsedTime, err := time.Parse(time.RFC3339, timeStr); err == nil {
@@ -70,13 +70,13 @@ func (a *GenericAdvancedAgent) Process(ctx context.Context, msg *Message) (*Mess
 
 	// 记录到记忆
 	if a.GetMemoryManager() != nil {
-		stateKey := memory.CreateTaggedKey(a.GetID(), "state", "last_process_time")
+		stateKey := memory.CreateTaggedKey(a.GetID(), memory.MemoryCategoryState, memory.StateKeyLastProcessTime)
 		if err := a.SaveMemory(ctx, stateKey, now.Format(time.RFC3339)); err != nil {
 			hlog.CtxWarnf(ctx, "保存处理时间到记忆失败: %v", err)
 		}
 
 		// 保存消息历史
-		historyKey := memory.CreateTaggedKey(a.GetID(), "history", msg.ID)
+		historyKey := memory.CreateTaggedKey(a.GetID(), memory.MemoryCategoryHistory, msg.ID)
 		if err := a.SaveMemory(ctx, historyKey, msg); err != nil {
 			hlog.CtxWarnf(ctx, "保存消息历史到记忆失败: %v", err)
 		}
@@ -204,9 +204,9 @@ func (a *GenericAdvancedAgent) Process(ctx context.Context, msg *Message) (*Mess
 		response.Subject = "工具调用结果: " + toolCall.Tool
 		response.Content = toolResult
 		response.ReplyTo = msg.ID
-		response.SetMetadata("tool_name", toolCall.Tool)
-		response.SetMetadata("process_time", time.Since(now).String())
-		response.SetMetadata("agent_type", string(a.GetType()))
+		response.SetMetadata(memory.ToolNameKey, toolCall.Tool)
+		response.SetMetadata(memory.MetadataKeyProcessTime, time.Since(now).String())
+		response.SetMetadata(memory.MetadataKeyAgentType, string(a.GetType()))
 
 		return response, nil
 	}
@@ -220,9 +220,9 @@ func (a *GenericAdvancedAgent) Process(ctx context.Context, msg *Message) (*Mess
 		response.Subject = fmt.Sprintf("来自%s的消息", a.GetType())
 		response.Content = sendMessage.Message
 		response.ReplyTo = msg.ID
-		response.SetMetadata("original_from", msg.From)
-		response.SetMetadata("process_time", time.Since(now).String())
-		response.SetMetadata("agent_type", string(a.GetType()))
+		response.SetMetadata(memory.MetadataKeyOriginalFrom, msg.From)
+		response.SetMetadata(memory.MetadataKeyProcessTime, time.Since(now).String())
+		response.SetMetadata(memory.MetadataKeyAgentType, string(a.GetType()))
 
 		return response, nil
 	}
@@ -234,10 +234,10 @@ func (a *GenericAdvancedAgent) Process(ctx context.Context, msg *Message) (*Mess
 	response.ReplyTo = msg.ID
 
 	// 添加处理元数据
-	response.SetMetadata("process_time", time.Since(now).String())
-	response.SetMetadata("agent_type", string(a.GetType()))
-	response.SetMetadata("model_name", a.GetModel().ModelName())
-	response.SetMetadata("model_type", string(a.GetModel().ModelType()))
+	response.SetMetadata(memory.MetadataKeyProcessTime, time.Since(now).String())
+	response.SetMetadata(memory.MetadataKeyAgentType, string(a.GetType()))
+	response.SetMetadata(memory.MetadataKeyModelName, a.GetModel().ModelName())
+	response.SetMetadata(memory.MetadataKeyModelType, string(a.GetModel().ModelType()))
 
 	return response, nil
 }
@@ -245,12 +245,12 @@ func (a *GenericAdvancedAgent) Process(ctx context.Context, msg *Message) (*Mess
 // handleToolCallMessage 处理工具调用消息
 func (a *GenericAdvancedAgent) handleToolCallMessage(ctx context.Context, msg *Message) (*Message, error) {
 	// 获取工具名称和输入
-	toolName, ok := msg.GetData("tool_name")
+	toolName, ok := msg.GetData(memory.ToolNameKey)
 	if !ok {
 		return CreateErrorMessage(a.GetID(), fmt.Errorf("缺少工具名称"), msg.ID), nil
 	}
 
-	input, ok := msg.GetData("input")
+	input, ok := msg.GetData(memory.ToolInputKey)
 	if !ok {
 		return CreateErrorMessage(a.GetID(), fmt.Errorf("缺少工具输入"), msg.ID), nil
 	}
@@ -277,7 +277,7 @@ func (a *GenericAdvancedAgent) handleToolCallMessage(ctx context.Context, msg *M
 
 	// 创建工具结果消息
 	response := CreateToolResultMessage(a.GetID(), result, msg.ID)
-	response.SetMetadata("tool_name", toolNameStr)
+	response.SetMetadata(memory.ToolNameKey, toolNameStr)
 
 	// 记录工具调用结果到记忆
 	if a.GetMemoryManager() != nil {
@@ -296,7 +296,7 @@ func (a *GenericAdvancedAgent) Shutdown(ctx context.Context) error {
 
 	// 保存最终状态到记忆
 	if a.GetMemoryManager() != nil {
-		stateKey := memory.CreateTaggedKey(a.GetID(), "state", "shutdown_time")
+		stateKey := memory.CreateTaggedKey(a.GetID(), memory.MemoryCategoryState, "shutdown_time")
 		if err := a.SaveMemory(ctx, stateKey, time.Now().Format(time.RFC3339)); err != nil {
 			hlog.CtxWarnf(ctx, "保存关闭时间到记忆失败: %v", err)
 		}
