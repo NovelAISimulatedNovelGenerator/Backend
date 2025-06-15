@@ -20,9 +20,14 @@ type Config struct {
     EmbeddingTimeout time.Duration
 }
 
-// Option 功能选项
-// 典型调用：rag.NewProvider(store, embedder, rag.WithChunkSize(1024))
-type Option func(*Config)
+// Option 用于在创建 Provider 时自定义配置或依赖
+// 典型调用：rag.NewProvider(store, embedder,
+//     rag.WithChunkSize(1024),
+//     rag.WithLLM(myLLM),
+//     rag.WithSplitter(customSplitter),
+// )
+// Option 回调拿到 *Provider，因此既可修改 p.cfg，也可直接注入依赖
+type Option func(*Provider)
 
 // defaultConfig 返回默认配置
 func defaultConfig() *Config {
@@ -35,17 +40,31 @@ func defaultConfig() *Config {
     }
 }
 
-// WithChunkSize 设置 ChunkSize
-func WithChunkSize(size int) Option { return func(c *Config) { c.ChunkSize = size } }
+// Below are concrete Option helpers ------------------------------------------------
 
-// WithChunkOverlap 设置 ChunkOverlap
-func WithChunkOverlap(overlap int) Option { return func(c *Config) { c.ChunkOverlap = overlap } }
+func WithChunkSize(size int) Option {
+    return func(p *Provider) {
+        p.cfg.ChunkSize = size
+        // 更新 splitter 以匹配新的 chunk 参数
+        p.splitter = defaultSplitter(p.cfg.ChunkSize, p.cfg.ChunkOverlap)
+    }
+}
 
-// WithDefaultTopK 设置 DefaultTopK
-func WithDefaultTopK(topK int) Option { return func(c *Config) { c.DefaultTopK = topK } }
+func WithChunkOverlap(overlap int) Option {
+    return func(p *Provider) {
+        p.cfg.ChunkOverlap = overlap
+        p.splitter = defaultSplitter(p.cfg.ChunkSize, p.cfg.ChunkOverlap)
+    }
+}
 
-// WithMinScore 设置 MinScore
-func WithMinScore(score float32) Option { return func(c *Config) { c.MinScore = score } }
+func WithDefaultTopK(topK int) Option { return func(p *Provider) { p.cfg.DefaultTopK = topK } }
 
-// WithEmbeddingTimeout 设置嵌入请求超时
-func WithEmbeddingTimeout(d time.Duration) Option { return func(c *Config) { c.EmbeddingTimeout = d } }
+func WithMinScore(score float32) Option { return func(p *Provider) { p.cfg.MinScore = score } }
+
+func WithEmbeddingTimeout(d time.Duration) Option { return func(p *Provider) { p.cfg.EmbeddingTimeout = d } }
+
+// WithLLM 注入 LLM 依赖
+func WithLLM(llm LLM) Option { return func(p *Provider) { p.llm = llm } }
+
+// WithSplitter 注入自定义文本切分器
+func WithSplitter(s Splitter) Option { return func(p *Provider) { p.splitter = s } }

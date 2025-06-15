@@ -50,5 +50,8 @@ type Splitter interface {
 
 // defaultSplitter 返回基于 TokenSplitter 的默认实现
 func defaultSplitter(chunkSize, overlap int) Splitter {
-    return textsplitter.NewTokenSplitter(chunkSize, overlap)
+    return textsplitter.NewTokenSplitter(
+        textsplitter.WithChunkSize(chunkSize),
+        textsplitter.WithChunkOverlap(overlap),
+    )
 }

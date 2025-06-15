@@ -32,9 +32,6 @@ func NewProvider(store VectorStore, embedder Embedder, opts ...Option) (*Provide
     }
 
     cfg := defaultConfig()
-    for _, o := range opts {
-        o(cfg)
-    }
 
     p := &Provider{
         cfg:      cfg,
@@ -42,21 +39,12 @@ func NewProvider(store VectorStore, embedder Embedder, opts ...Option) (*Provide
         embedder: embedder,
         splitter: defaultSplitter(cfg.ChunkSize, cfg.ChunkOverlap),
     }
-    return p, nil
-}
 
-// WithLLM is an Option to inject LLM dependency
-func WithLLM(llm LLM) Option {
-    return func(c *Config) {
-        // LLM 保存到外层 Provider，所以这里无法直接注入；在 NewProvider 后再调用 SetLLM
+    for _, o := range opts {
+        o(p)
     }
-}
 
-// SetLLM 设置 LLM 依赖；可在运行时注入
-func (p *Provider) SetLLM(llm LLM) {
-    p.mu.Lock()
-    defer p.mu.Unlock()
-    p.llm = llm
+    return p, nil
 }
 
 // IndexDocuments 将文档切块后写入向量数据库
@@ -151,4 +139,11 @@ func BuildPrompt(query string, recs []memory.Record) string {
     sb.WriteString(query)
     sb.WriteString("\n答案: ")
     return sb.String()
+}
+
+// SetLLM 设置 LLM 依赖；可在运行时注入
+func (p *Provider) SetLLM(llm LLM) {
+    p.mu.Lock()
+    defer p.mu.Unlock()
+    p.llm = llm
 }
